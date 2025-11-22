@@ -1,0 +1,9 @@
+*.yaml
+*.pem
+*.pub
+__pycache__/
+*.pyc
+.vscode/
+.env
+test/
+venv/
