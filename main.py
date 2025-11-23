@@ -10,6 +10,7 @@ and are documented with short docstrings.
 """
 
 import os
+import sys
 import libs.keyManager as keyManager
 import libs.userManager as userManager
 
@@ -31,7 +32,7 @@ def graceFulExit():
             except Exception as e:
                 print(f'Failed to delete {file_path}. Reason: {e}')
         os.rmdir(directory)
-    exit()
+    sys.exit()
 
 pwds = {}
 
