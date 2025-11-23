@@ -15,6 +15,11 @@ import libs.keyManager as keyManager
 import libs.userManager as userManager
 
 import signal
+
+# Initialize global variables
+pwds = {}
+directory = None
+
 def signal_handler(sig, frame):
     print('\nYou pressed Ctrl+C! Exiting gracefully...')
     graceFulExit()
@@ -22,8 +27,8 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def graceFulExit():
     """Cleans up temporary files and exits the program."""
-    # Check if directory exists and is defined before attempting cleanup
-    if 'directory' in globals() and os.path.exists(directory):
+    # Check if directory exists before attempting cleanup
+    if directory is not None and os.path.exists(directory):
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
             try:
@@ -33,8 +38,6 @@ def graceFulExit():
                 print(f'Failed to delete {file_path}. Reason: {e}')
         os.rmdir(directory)
     sys.exit()
-
-pwds = {}
 
 directory = "./tempKeys"
 if not os.path.exists(directory):
