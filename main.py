@@ -13,6 +13,7 @@ import os
 import sys
 import libs.keyManager as keyManager
 import libs.userManager as userManager
+import libs.hostManager as hostManager
 
 pwds = {}
 
@@ -22,18 +23,16 @@ if not os.path.exists(directory):
 
 import signal
 
-# Initialize global variables
-pwds = {}  # Dictionary to store server passwords
-directory = None  # Path to temporary directory for SSH keys, set after initialization
+pwds = {}
+directory = None
 
 def signal_handler(sig, frame):
     print('\nYou pressed Ctrl+C! Exiting gracefully...')
-    graceFulExit()
+    exit_gracefully()
 signal.signal(signal.SIGINT, signal_handler)
 
-def graceFulExit():
+def exit_gracefully():
     """Cleans up temporary files and exits the program."""
-    # Check if directory exists before attempting cleanup
     if directory is not None and os.path.exists(directory):
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
@@ -61,7 +60,9 @@ Welcome to the SSH Key Manager, please select an option:\n
 5. Remove Key from User
 6. Remove User
 7. Manage User Key Access
-8. Exit
+8. Manage Hosts
+
+9. Exit
 """
 
 #### Main CLI Loop ####
@@ -85,14 +86,12 @@ while True:
     elif option == '7':
         userManager.user_key_access_cli()
     elif option == '8':
-        break
+        hostManager.host_cli()
+    elif option == '9':
+        exit_gracefully()
     else:
         print("Invalid option selected.")
         input("Press Enter to continue...")
-
-
-
-graceFulExit()
 
 
 
