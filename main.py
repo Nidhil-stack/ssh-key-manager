@@ -21,14 +21,15 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def graceFulExit():
     """Cleans up temporary files and exits the program."""
-    for filename in os.listdir(directory):
-        file_path = os.path.join(directory, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-        except Exception as e:
-            print(f'Failed to delete {file_path}. Reason: {e}')
-    os.rmdir(directory)
+    if os.path.exists(directory):
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                print(f'Failed to delete {file_path}. Reason: {e}')
+        os.rmdir(directory)
     exit()
 
 pwds = {}
