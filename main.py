@@ -12,6 +12,7 @@ and are documented with short docstrings.
 import os
 import libs.keyManager as keyManager
 import yaml
+import prettytable
 
 
 directory = "./tempKeys"
@@ -80,7 +81,6 @@ def fix_keys():
         print("Fixing keys...")
         keyManager.upload_all_ssh_files(pwds, directory=directory, key_tables=key_tables)
         input("All done! Press Enter to continue...")
-
     
 def graceFulExit():
     """Cleans up temporary files and exits the program."""
@@ -93,6 +93,88 @@ def graceFulExit():
             print(f'Failed to delete {file_path}. Reason: {e}')
     os.rmdir(directory)
     exit()
+
+
+########### new functions to be moved to libs/userManager.py ###########
+
+
+
+def print_user_table(config):
+    users = config.get('users', [])
+    user_table = prettytable.PrettyTable()
+    user_table.field_names = ["Username", "Email", "Keys"]
+    for user in users:
+        i = 0
+        email = user.get('email', 'N/A')
+        username = user.get('name', 'N/A')
+        keys_info = user.get('keys', [])
+        if not keys_info:
+            keys = 'N/A'
+        else:
+            for key in keys_info:
+                key_type = key.get('type', 'N/A')
+                key_value = key.get('key', 'N/A')
+                keys = f"{key_type} {key_value[:5]}..."
+                if i == 0:
+                    user_table.add_row([username, email, keys])
+                else:
+                    user_table.add_row(['-', '-', keys])
+                i += 1
+    print(user_table)
+
+def add_user(config, username, email, keys):
+    new_user = {
+        'name': username,
+        'email': email,
+        'keys': [{'type': k['type'], 'key': k['key']} for k in keys]
+    }
+    config.setdefault('users', []).append(new_user)
+    print(f"User {username} added successfully.")
+    return config
+
+def load_config():
+    with open('config.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+    return config
+
+def save_config(config, path='config.yaml'):
+    with open(path, 'w') as f:
+        yaml.dump(config, f)
+
+def add_user_cli(config):
+    username = input("Insert new user name: ")
+    email = input("Insert new user email: ")
+    keys = []
+    while True:
+        key = input("Insert key or 'done' to finish: ")
+        if key.lower() == 'done':
+            break
+        try: 
+            key_type = key.split()[0]
+            key_value = key.split()[1]
+            key_hostname = key.split()[2] if len(key.split()) > 2 else ''
+            keys.append({'type': key_type, 'key': key_value, 'hostname': key_hostname})
+        except IndexError:
+            print("Invalid key format. Please enter the key in the format: <type> <key> [hostname]")
+    config = add_user(config, username, email, keys)
+    save_config(config)
+
+###### testing code ###########
+
+
+config = load_config()
+
+print_user_table(config)
+
+###actual test code###
+
+###end of actual test code###
+
+print_user_table(config)
+
+graceFulExit()
+
+########## main interactive loop ###########
 
 while True:
     os.system('cls' if os.name == 'nt' else 'clear')
