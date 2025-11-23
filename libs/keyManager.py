@@ -14,6 +14,18 @@ all_keys = []
 passwords = {}
 
 def upload_all_ssh_files(pwds, key_tables, console_lock = None, directory='./tempKeys'):
+    """Upload multiple `authorized_keys` files to their respective servers concurrently.
+
+    Parameters:
+    - pwds (dict): dictionary to store or reuse passwords for user@host pairs.
+    - key_tables (dict): mapping of "user@host" -> list of key entries to write and upload.
+    - console_lock (threading.Lock|None): optional lock used to synchronize console I/O when
+      prompting for passwords across threads.
+    - directory (str): local directory where temporary `authorized_keys` files are created.
+
+    The function creates a temporary `authorized_keys` file for each entry in `key_tables`,
+    spawns a thread to upload it (using `upload_ssh_file`) and waits for all uploads to finish.
+    """
     threads = []
     servers, _ = fetch_config('config.yaml')
     if console_lock is None:
@@ -31,6 +43,22 @@ def upload_all_ssh_files(pwds, key_tables, console_lock = None, directory='./tem
         thread.join()
 
 def upload_ssh_file(host, username, pwds, console_lock = None, directory='./tempKeys'):
+    """Upload a single `authorized_keys` file to a remote user's `.ssh/authorized_keys`.
+
+    Attempts key-based authentication first using a local key file (`./key.pem`). If that
+    fails with an authentication error, prompts (with up to 3 attempts) for a password
+    (reusing any value present in `pwds`). On success, uploads the local temporary
+    `{username}@{host}.authorized_keys` file to `/home/{username}/.ssh/authorized_keys`.
+
+    Parameters:
+    - host (str): remote host hostname or IP.
+    - username (str): remote username.
+    - pwds (dict): shared dictionary of saved passwords keyed by `user@host`.
+    - console_lock (threading.Lock|None): optional lock to synchronize password prompts.
+    - directory (str): directory holding the temporary `authorized_keys` file.
+
+    Raises exceptions from `paramiko` for non-authentication related failures.
+    """
     with open(os.path.join(directory, f'{username}@{host}.authorized_keys'), 'r') as key_file:
         print(f"Uploading keys to {username}@{host}")
         client = paramiko.SSHClient()
@@ -72,6 +100,15 @@ def upload_ssh_file(host, username, pwds, console_lock = None, directory='./temp
             
 
 def create_ssh_file(hostname, key_data, directory='./tempKeys'):
+    """Create a temporary `authorized_keys` file locally for a given host/user.
+
+    Parameters:
+    - hostname (str): used to name the temporary file `{hostname}.authorized_keys`.
+    - key_data (list): list of key dictionaries with fields `type`, `key`, `hostname`.
+    - directory (str): where to write the file. Directory will be created if missing.
+
+    Returns the path to the created file.
+    """
     if not os.path.exists(directory):
         os.makedirs(directory)
     key_path = os.path.join(directory, f'{hostname}.authorized_keys')
@@ -81,6 +118,20 @@ def create_ssh_file(hostname, key_data, directory='./tempKeys'):
     return key_path
 
 def get_ssh_keys(file_path, pwds = {}):
+    """Retrieve SSH keys from all configured servers in the provided config file.
+
+    Parameters:
+    - file_path (str): path to YAML configuration file.
+    - pwds (dict): optional dictionary used to store/reuse passwords for `user@host`.
+
+    Returns a tuple: (servers, all_user_keys, all_keys, passwords)
+    - servers: list of server entries from the config
+    - all_user_keys: list of expected keys derived from users and servers in config
+    - all_keys: discovered keys found on the servers (populated by this call)
+    - passwords: dictionary of passwords entered during the fetch process
+
+    The function spawns one thread per `user@host` and collects keys concurrently.
+    """
     del all_keys[:]
     threads = []
     console_lock = threading.Lock()
@@ -98,6 +149,16 @@ def get_ssh_keys(file_path, pwds = {}):
 
 
 def fetch_config(file_path):
+    """Parse the YAML configuration and return servers and expanded user key expectations.
+
+    Parameters:
+    - file_path (str): path to YAML configuration file.
+
+    Returns:
+    - servers (list): list of server definitions from the config.
+    - all_user_keys (list): flattened list of key expectations; each entry contains
+      `hostname`, `user`, `type`, `key`, `key_user`, and `email`.
+    """
     all_user_keys = []
     with open(file_path, 'r') as file:
         config = yaml.safe_load(file)
@@ -116,6 +177,18 @@ def fetch_config(file_path):
     return servers, all_user_keys
 
 def fetch_authorized_keys(host, username, console_lock, pwds):
+    """Connect to a remote host and fetch the `authorized_keys` for a user.
+
+    Parameters:
+    - host (str): remote host.
+    - username (str): remote username whose `authorized_keys` will be retrieved.
+    - console_lock (threading.Lock): lock used to synchronize interactive password prompts.
+    - pwds (dict): dictionary to store/use passwords for `user@host`.
+
+    The function downloads the remote `authorized_keys` to a temporary local file,
+    parses it with `parse_authorized_keys`, removes the temporary file and updates
+    the module-level `all_keys` list with discovered keys.
+    """
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
@@ -157,7 +230,15 @@ def fetch_authorized_keys(host, username, console_lock, pwds):
         if not any(existing_key['key'] == key['key'] and existing_key['host'] == host and existing_key['user'] == username for existing_key in all_keys):
             all_keys.append({'host': host, 'user': username, 'type': key['type'], 'key': key['key'], 'key_user': key['user']})
 
-def parse_authorized_keys(file_path): #store the key and user info
+def parse_authorized_keys(file_path):
+    """Parse an `authorized_keys` file and return a list of key dictionaries.
+
+    Parameters:
+    - file_path (str): path to a local `authorized_keys` file.
+
+    Returns a list of dicts: `{'type': <key-type>, 'key': <key-data>, 'user': <comment/hostname>}`.
+    Lines that are empty or start with `#` are ignored.
+    """
     with open(file_path, 'r') as file:
         keys = []
         lines = file.readlines()
@@ -172,6 +253,11 @@ def parse_authorized_keys(file_path): #store the key and user info
 
 
 def print_keys_table(keys):
+    """Print a summary table of discovered keys (`all_keys`).
+
+    The `keys` parameter is unused: the function prints the module-level
+    `all_keys` list in a pretty table for human inspection.
+    """
     table = prettytable.PrettyTable()
     table.field_names = ["Host", "User", "Key Type", "Key (first 10 chars)", "HostName/User"]
     for key in all_keys:
@@ -180,6 +266,11 @@ def print_keys_table(keys):
 
 
 def print_user_keys_table(keys):
+    """Pretty-print a list of user key expectations derived from the config.
+
+    Parameters:
+    - keys (list): each entry should contain `hostname`, `user`, `type`, `key`, `key_user`, `email`.
+    """
     table = prettytable.PrettyTable()
     table.field_names = ["Host", "User", "Key Type", "Key (first 10 chars)", "HostName/User", "Email"]
     for key in keys:
@@ -188,6 +279,11 @@ def print_user_keys_table(keys):
 
 
 def print_checked_keys_table(checked_keys):
+    """Print the results of `check_keys` in a readable table.
+
+    Each entry in `checked_keys` is expected to have `user`, `host`, `type`, `key`, `hostname`, and `status`.
+    Status values are mapped to human-readable strings and colored output.
+    """
     table = prettytable.PrettyTable()
     table.field_names = ["User", "Host", "Key Type", "Key (first 10 chars)", "HostName/User", "Status"]
     for key in checked_keys:
@@ -197,6 +293,15 @@ def print_checked_keys_table(checked_keys):
 
 
 def check_keys(all_user_keys):
+    """Compare expected user keys from the config with discovered keys on servers.
+
+    Parameters:
+    - all_user_keys (list): expectations derived from `fetch_config`.
+
+    Returns:
+    - checked_keys (list): Each entry contains `user`, `host`, `type`, `key`, `hostname`, and `status`.
+      Status codes: 0 = matched (key found and authorized), 1 = not found (expected but missing), -1 = unauthorized (found on server but not present in config).
+    """
 
     checked_keys =  []
 
