@@ -44,7 +44,8 @@ Welcome to the SSH Key Manager, please select an option:\n
 4. Add Key(s) to User
 5. Remove Key from User
 6. Remove User
-7. Exit
+7. Manage User Key Access
+8. Exit
 """
 
 #### Main CLI Loop ####
@@ -66,6 +67,8 @@ while True:
     elif option == '6':
         userManager.user_remove_cli()
     elif option == '7':
+        userManager.user_key_access_cli()
+    elif option == '8':
         break
     else:
         print("Invalid option selected.")

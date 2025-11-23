@@ -1,3 +1,4 @@
+from math import perm
 import yaml
 import prettytable
 import os
@@ -310,4 +311,173 @@ def user_remove_cli(config='config.yaml', email=None):
     print(f"User with email {email} removed successfully.")
     save_config(config)
     input("Press Enter to continue...")
+    return config
+
+def user_key_access_print(config, email, key_value):
+    """Prints the permissions of a specific key for a user.
+    Parameters:
+    - config (dict): Configuration dictionary containing user data.
+    - email (str): Email of the user whose key permissions are to be printed.
+    - key_value (str): SSH key string whose permissions are to be printed.
+    """
+    users = config.get('users', [])
+    if not users:
+        print("No users found in the configuration.")
+        input("Press Enter to continue...")
+        return
+    for user in users:
+        if user['email'] == email:
+            keys = user.get('keys', [])
+            if not keys:
+                print(f"No keys found for user {user['name']}.")
+                input("Press Enter to continue...")
+                return
+            for existing_key in keys:
+                print(existing_key['key'], key_value)
+                if existing_key['key'] == key_value:
+                    access = existing_key.get('access', [])
+                    table = prettytable.PrettyTable()
+                    table.field_names = ["Access Permissions"]
+                    if access:
+                        for perm in access:
+                            table.add_row([f"{perm['username']}@{perm['host']}"])
+                    print(f"Access permissions for key of user {user['name']}:")
+                    print(table)
+                    return
+            print(f"Key not found for user {user['name']}.")
+            input("Press Enter to continue...")
+            return
+    print(f"User with email {email} does not exist.")
+    input("Press Enter to continue...")
+
+def user_key_access_add(config, email, key_value, access):
+    """Adds permissions to a user's key in the configuration.
+    Parameters:
+    - config (dict): Configuration dictionary containing user data.
+    - email (str): Email of the user whose key permissions are to be updated.
+    - key_value (str): SSH key string to which permissions are to be added.
+    - access (dict): List of permissions to be added.
+    Returns:
+    - config (dict): Updated configuration dictionary.
+    """
+    users = config.get('users', [])
+    for user in users:
+        if user['email'] == email:
+            keys = user.get('keys', [])
+            for existing_key in keys:
+                if existing_key['key'] == key_value:
+                    if type(existing_key.get('access')) is not list:
+                        existing_key['access'] = [access]
+                    else:
+                        existing_key.setdefault('access', []).append(access)
+                    return config
+            print(f"Key not found for user {user['name']}.")
+            input("Press Enter to continue...")
+            return config
+    return config
+
+def user_key_access_remove(config, email, key_value, access):
+    """Removes permissions from a user's key in the configuration.
+    Parameters:
+    - config (dict): Configuration dictionary containing user data.
+    - email (str): Email of the user whose key permissions are to be updated.
+    - key_value (str): SSH key string from which permissions are to be removed.
+    - access (list): List of permissions to be removed.
+    Returns:
+    - config (dict): Updated configuration dictionary.
+    """
+    users = config.get('users', [])
+    for user in users:
+        if user['email'] == email:
+            keys = user.get('keys', [])
+            for existing_key in keys:
+                if existing_key['key'] == key_value:
+                    existing_access = existing_key.get('access', [])
+                    if access in existing_access:
+                        if 'access' not in existing_key:
+                            existing_key['access'] = []
+                        existing_access.remove(access)
+                    return config
+            print(f"Key not found for user {user['name']}.")
+            input("Press Enter to continue...")
+            return config
+    return config
+
+def user_key_access_cli(config='config.yaml', email=None):
+    """CLI for managing key access permissions for a user.
+    Parameters:
+    - config (str or dict): Path to the configuration file or configuration dictionary.
+    - email (str): Email of the user whose key permissions are to be managed.
+    Returns:
+    - config (dict): Updated configuration dictionary.
+    """
+    if isinstance(config, str):
+        config = load_config(config)
+    os.system('cls' if os.name == 'nt' else 'clear')
+    if email is None:
+        user_print(config)
+        email = input("Insert user email to manage key access: ")
+        os.system('cls' if os.name == 'nt' else 'clear')
+    users = config.get('users', [])
+    user_exists = False
+    for user in users:
+        if user['email'] == email:
+            user_exists = True
+            break
+    if not user_exists:
+        print(f"User with email {email} does not exist.")
+        input("Press Enter to continue...")
+        return config
+    while True:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        user_print_keys(config, email)
+        key_number = input("Insert key number to manage access or 'done' to finish: ")
+        try:
+            key_index = int(key_number) - 1
+            users = config.get('users', [])
+            for user in users:
+                if user['email'] == email:
+                    keys = user.get('keys', [])
+                    if 0 <= key_index < len(keys):
+                        if keys[key_index].get('admin', False):
+                            print("Cannot manage access for admin keys.")
+                            input("Press Enter to continue...")
+                            return config
+                        key_value = keys[key_index]['key']
+                    else:
+                        print("Invalid key number.")
+                        continue
+        except ValueError:
+            if key_number.lower() == 'done':
+                break
+            print("Invalid input. Please enter a valid key number or 'done'.")
+            input("Press Enter to continue...")
+            continue
+        while True:
+            os.system('cls' if os.name == 'nt' else 'clear')
+            user_key_access_print(config, email, key_value)
+            user_input = input("Type 'add' to add access, 'remove' to remove access, followed by the access you intend to edit in the format username@host (type 'back' or 'done' to finish): \n").strip()
+            if user_input.lower() == 'done' or user_input.lower() == 'back':
+                break
+            if len(user_input.split()) < 2:
+                print("Invalid input. Please enter in the format: <action> <username@host>")
+                input("Press Enter to continue...")
+                continue
+            action = user_input.split()[0]
+            perm = user_input.split()[1]
+            if '@' not in perm or len(perm.split('@')) != 2:
+                print("Invalid format. Please enter in the format 'username@host'.")
+                input("Press Enter to continue...")
+                continue
+            access = {'username': perm.split('@')[0], 'host': perm.split('@')[1]}
+            if action.lower() == 'add':
+                config = user_key_access_add(config, email, key_value, access)
+            elif action.lower() == 'remove':
+                config = user_key_access_remove(config, email, key_value, access)
+            elif action.lower() == 'back' or action.lower() == 'done':
+                break
+            else:
+                print("Invalid action. Please enter 'add', 'remove', or 'done'.")
+                input("Press Enter to continue...")
+    save_config(config)
     return config
