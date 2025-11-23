@@ -13,6 +13,67 @@ colorReset  = "\033[0m"
 all_keys = []
 passwords = {}
 
+
+def print_keys_table_cli(pwds):
+    """Fetch and display all SSH keys from configured hosts.
+
+    This function retrieves SSH key data from the configuration using
+    `get_ssh_keys`, updates the local password cache, clears
+    the console, prints a table of all discovered keys and waits for
+    the user to press Enter before returning.
+    """
+
+    servers, all_user_keys, all_keys, passwords = get_ssh_keys('config.yaml', pwds)
+    pwds.update(passwords)
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print_keys_table(all_keys)
+    input("Press Enter to continue...")
+
+def fix_keys_cli(pwds, directory='./tempKeys'):
+    """Run a check-and-fix workflow for SSH keys.
+
+    Steps performed:
+    - Fetch current key state from `config.yaml`.
+    - Run `check_keys` to detect inconsistencies.
+    - Display a table of checked keys and, if issues are found,
+      allow the user to confirm applying fixes.
+    - On confirmation, upload corrected `authorized_keys` files to the
+      remote servers using `upload_all_ssh_files`.
+
+    This function updates the shared `pwds` cache with any passwords
+    returned from `get_ssh_keys`.
+    """
+
+    servers, all_user_keys, all_keys, passwords = get_ssh_keys('config.yaml', pwds)
+    pwds.update(passwords)
+    checked_keys = check_keys(all_user_keys)
+    # if all keys are status 0, then no issues
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print_checked_keys_table(checked_keys)
+    if all(key['status'] == 0 for key in checked_keys):
+        print("All servers are up to date, no issues found.")
+        input("Press Enter to continue...")
+        return
+    print("Issues found with the above keys. Please check them then press Enter to continue.")
+    fixed_keys = list(filter(lambda k: k['status'] >= 0, checked_keys))
+    input("Press Enter to continue...")
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("Fixed Keys:")
+    print_checked_keys_table(list(fixed_keys))
+    key_tables = {}
+    for server in servers:
+        for user in server['users']:
+            host = server['host']
+            key_table = list(filter(lambda k: k['host'] == host and k['user'] == user and k['status'] >= 0, list(fixed_keys)))
+            key_tables[f"{user}@{host}"] = key_table
+            print(f"Keys table for {user}@{host}...")
+            print_checked_keys_table(key_table)
+    confirmation = input("Result after fix, continue? [y/N]")
+    if confirmation.lower() == 'y':
+        print("Fixing keys...")
+        upload_all_ssh_files(pwds, directory=directory, key_tables=key_tables)
+        input("All done! Press Enter to continue...")
+
 def upload_all_ssh_files(pwds, key_tables, console_lock = None, directory='./tempKeys'):
     """Upload multiple `authorized_keys` files to their respective servers concurrently.
 
@@ -166,8 +227,13 @@ def fetch_config(file_path):
     users = config['users']
     
     for user in users:
+        print(f"Processing user {user['email']}...")
+        if user.get('keys') is None or len(user['keys']) == 0:
+            continue
         for key in user['keys']:
             if not key.get('admin', False):
+                if key.get('access') is None or len(key['access']) == 0:
+                    continue
                 for server in key['access']:
                     all_user_keys.append({'hostname': server['host'], 'user': server['username'], 'type': key['type'], 'key': key['key'], 'key_user': key['hostname'],'email': user['email'],})
             else:
