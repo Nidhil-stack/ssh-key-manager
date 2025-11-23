@@ -17,8 +17,8 @@ import libs.userManager as userManager
 import signal
 
 # Initialize global variables
-pwds = {}
-directory = None
+pwds = {}  # Dictionary to store server passwords
+directory = None  # Path to temporary directory for SSH keys, set after initialization
 
 def signal_handler(sig, frame):
     print('\nYou pressed Ctrl+C! Exiting gracefully...')
@@ -36,7 +36,10 @@ def graceFulExit():
                     os.unlink(file_path)
             except Exception as e:
                 print(f'Failed to delete {file_path}. Reason: {e}')
-        os.rmdir(directory)
+        try:
+            os.rmdir(directory)
+        except OSError as e:
+            print(f'Failed to remove directory {directory}. Reason: {e}')
     sys.exit()
 
 directory = "./tempKeys"
