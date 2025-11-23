@@ -65,7 +65,17 @@ def save_config(config, path='config.yaml'):
         exit(1)
 
 def hosts_add(config, host, user):
-    """Adds a host and its users to the configuration."""
+    """
+    Adds a host and its users to the configuration.
+
+    Parameters:
+    - config (dict): The configuration dictionary to modify.
+    - host (str): The host to add or update.
+    - user (str): The user to add to the host.
+
+    Returns:
+    - config (dict): The modified configuration dictionary.
+    """
     if 'hosts' not in config:
         config['hosts'] = []
     for h in config['hosts']:
