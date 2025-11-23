@@ -1,4 +1,3 @@
-from math import perm
 import yaml
 import prettytable
 import os
@@ -63,9 +62,25 @@ def load_config(path='config.yaml'):
     Returns:
     - config (dict): Configuration dictionary.
     """
-    with open(path, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
+    try:
+        with open(path, 'r') as f:
+            config = yaml.safe_load(f)
+        return config
+    except FileNotFoundError:
+        print(f"Error: Configuration file '{path}' not found.")
+        print("Please create a config.yaml file with your server and user configuration.")
+        exit(1)
+    except yaml.YAMLError as e:
+        print(f"Error: Failed to parse configuration file '{path}'.")
+        print(f"YAML parsing error: {e}")
+        exit(1)
+    except PermissionError:
+        print(f"Error: Permission denied when trying to read '{path}'.")
+        print("Please check file permissions.")
+        exit(1)
+    except Exception as e:
+        print(f"Error: An unexpected error occurred while loading '{path}': {e}")
+        exit(1)
 
 def save_config(config, path='config.yaml'):
     """Saves the configuration to a YAML file.
@@ -73,8 +88,16 @@ def save_config(config, path='config.yaml'):
     - config (dict): Configuration dictionary.
     - path (str): Path to the configuration file.
     """
-    with open(path, 'w') as f:
-        yaml.dump(config, f)
+    try:
+        with open(path, 'w') as f:
+            yaml.dump(config, f)
+    except PermissionError:
+        print(f"Error: Permission denied when trying to write to '{path}'.")
+        print("Please check file permissions.")
+        exit(1)
+    except Exception as e:
+        print(f"Error: An unexpected error occurred while saving '{path}': {e}")
+        exit(1)
 
 def user_add_cli(config='config.yaml'):
     """CLI for adding a new user.
@@ -92,6 +115,7 @@ def user_add_cli(config='config.yaml'):
     config = user_add_key_cli(config, email=email)
     os.system('cls' if os.name == 'nt' else 'clear')
     user_print(config)
+    save_config(config)
     input("Press Enter to continue...")
 
 
@@ -333,7 +357,6 @@ def user_key_access_print(config, email, key_value):
                 input("Press Enter to continue...")
                 return
             for existing_key in keys:
-                print(existing_key['key'], key_value)
                 if existing_key['key'] == key_value:
                     access = existing_key.get('access', [])
                     table = prettytable.PrettyTable()
@@ -356,7 +379,7 @@ def user_key_access_add(config, email, key_value, access):
     - config (dict): Configuration dictionary containing user data.
     - email (str): Email of the user whose key permissions are to be updated.
     - key_value (str): SSH key string to which permissions are to be added.
-    - access (dict): List of permissions to be added.
+    - access (dict): Permission to be added.
     Returns:
     - config (dict): Updated configuration dictionary.
     """
@@ -366,10 +389,9 @@ def user_key_access_add(config, email, key_value, access):
             keys = user.get('keys', [])
             for existing_key in keys:
                 if existing_key['key'] == key_value:
-                    if type(existing_key.get('access')) is not list:
-                        existing_key['access'] = [access]
-                    else:
-                        existing_key.setdefault('access', []).append(access)
+                    if not isinstance(existing_key.get('access'), list):
+                        existing_key['access'] = []
+                    existing_key['access'].append(access)
                     return config
             print(f"Key not found for user {user['name']}.")
             input("Press Enter to continue...")
@@ -382,7 +404,7 @@ def user_key_access_remove(config, email, key_value, access):
     - config (dict): Configuration dictionary containing user data.
     - email (str): Email of the user whose key permissions are to be updated.
     - key_value (str): SSH key string from which permissions are to be removed.
-    - access (list): List of permissions to be removed.
+    - access (dict): Permission to be removed.
     Returns:
     - config (dict): Updated configuration dictionary.
     """
@@ -394,8 +416,6 @@ def user_key_access_remove(config, email, key_value, access):
                 if existing_key['key'] == key_value:
                     existing_access = existing_key.get('access', [])
                     if access in existing_access:
-                        if 'access' not in existing_key:
-                            existing_key['access'] = []
                         existing_access.remove(access)
                     return config
             print(f"Key not found for user {user['name']}.")

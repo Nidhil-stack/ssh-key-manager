@@ -14,6 +14,12 @@ import sys
 import libs.keyManager as keyManager
 import libs.userManager as userManager
 
+pwds = {}
+
+directory = "./tempKeys"
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
 import signal
 
 # Initialize global variables
@@ -48,7 +54,8 @@ if not os.path.exists(directory):
 
 menu = """
 Welcome to the SSH Key Manager, please select an option:\n
-1. Fetch and display all SSH keys\n2. Fix SSH key issues
+1. Fetch and display all SSH keys
+2. Fix SSH key issues
 3. Add User
 4. Add Key(s) to User
 5. Remove Key from User

@@ -227,7 +227,6 @@ def fetch_config(file_path):
     users = config['users']
     
     for user in users:
-        print(f"Processing user {user['email']}...")
         if user.get('keys') is None or len(user['keys']) == 0:
             continue
         for key in user['keys']:
