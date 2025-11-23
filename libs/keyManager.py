@@ -223,7 +223,7 @@ def fetch_config(file_path):
     all_user_keys = []
     with open(file_path, 'r') as file:
         config = yaml.safe_load(file)
-    servers = config['servers']
+    servers = config.get('hosts') or config.get('servers')
     users = config['users']
     
     for user in users:
