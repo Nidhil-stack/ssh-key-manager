@@ -128,12 +128,16 @@ def add_user(config, username, email, keys):
         'email': email,
         'keys': [{'type': k['type'], 'key': k['key']} for k in keys]
     }
+    for user in config.get('users', []):
+        if user['email'] == email:
+            print(f"User with email {email} already exists.")
+            return config
     config.setdefault('users', []).append(new_user)
     print(f"User {username} added successfully.")
     return config
 
-def load_config():
-    with open('config.yaml', 'r') as f:
+def load_config(path='config.yaml'):
+    with open(path, 'r') as f:
         config = yaml.safe_load(f)
     return config
 
@@ -159,8 +163,49 @@ def add_user_cli(config):
     config = add_user(config, username, email, keys)
     save_config(config)
 
-###### testing code ###########
 
+def user_add_key(config, email, key):
+    users = config.get('users', [])
+    for user in users:
+        if user['email'] == email:
+            key_type = key.split()[0]
+            key_value = key.split()[1]
+            key_hostname = key.split()[2] if len(key.split()) > 2 else ''
+            user.setdefault('keys', []).append({'type': key_type, 'key': key_value, 'hostname': key_hostname})
+            return config
+    return config
+
+def user_add_key_cli(config):
+    email = input("Insert user email to add key: ")
+    users = config.get('users', [])
+    user_exists = False
+    for user in users:
+        if user['email'] == email:
+            user_exists = True
+            break
+    if not user_exists:
+        print(f"User with email {email} does not exist.")
+        return config
+    while True:
+        key = input("Insert key or 'done' to finish: ")
+        if key.lower() == 'done':
+            break
+        try: 
+            key_type = key.split()[0]
+            key_value = key.split()[1]
+            key_hostname = key.split()[2] if len(key.split()) > 2 else ''
+            for user in users:
+                if user['email'] == email:
+                    user.setdefault('keys', []).append({'type': key_type, 'key': key_value, 'hostname': key_hostname})
+                    print(f"Key added to user {user['name']}.")
+        except IndexError:
+            print("Invalid key format. Please enter the key in the format: <type> <key> [hostname]")
+    save_config(config)
+
+
+
+
+###### testing code ###########
 
 config = load_config()
 
@@ -168,13 +213,20 @@ print_user_table(config)
 
 ###actual test code###
 
+add_user_cli(config)
+user_add_key_cli(config)
 ###end of actual test code###
+
+config = load_config()
 
 print_user_table(config)
 
 graceFulExit()
 
 ########## main interactive loop ###########
+
+
+
 
 while True:
     os.system('cls' if os.name == 'nt' else 'clear')
