@@ -92,7 +92,6 @@ def hosts_remove(config, host, user=None):
         return config
     for i, h in enumerate(config['hosts']):
         if h['host'] == host:
-            print(user)
             if user is None:
                 del config['hosts'][i]
                 return config
