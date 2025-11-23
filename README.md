@@ -127,7 +127,7 @@ Roadmap / TODO
 
 - Allow specifying the path to the private key externally
 - Add detached/daemon mode for automation
-- Add a small TUI for quick configuration
+- Add a small TUI for quick configuration (?)
 - Add generation/editing of `config.yaml` from within the tool
 
 License
