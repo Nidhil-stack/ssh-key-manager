@@ -15,7 +15,7 @@ def load_config(path='config.yaml'):
         return config
     except FileNotFoundError:
         print(f"Error: Configuration file '{path}' not found.")
-        print("Please create a config.yaml file with your server and user configuration.")
+        print("Please create a config.yaml file with your host and user configuration.")
         exit(1)
     except yaml.YAMLError as e:
         print(f"Error: Failed to parse configuration file '{path}'.")
