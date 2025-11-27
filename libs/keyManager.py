@@ -198,14 +198,16 @@ def upload_ssh_file(host, username, pwds, console_lock=None, directory="./tempKe
                 console_lock.acquire()
             if "No such file" in str(e):
                 print(
-                    f"File path does not exist on {username}@{host}, creating .ssh directory."
+                    f"Remote .ssh directory does not exist for {username}@{host}. Upload failed."
                 )
                 if console_lock:
                     console_lock.release()
                 sftp.close()
                 client.close()
-
-
+            else:
+                sftp.close()
+                client.close()
+                raise
 def create_ssh_file(hostname, key_data, directory="./tempKeys"):
     """Create a temporary `authorized_keys` file locally for a given host/user.
 
