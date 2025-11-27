@@ -15,6 +15,7 @@ import libs.keyManager as keyManager
 import libs.userManager as userManager
 import libs.hostManager as hostManager
 import yaml
+import signal
 
 pwds = {}
 
@@ -22,7 +23,6 @@ directory = "./tempKeys"
 if not os.path.exists(directory):
     os.makedirs(directory)
 
-import signal
 
 pwds = {}
 directory = None
