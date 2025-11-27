@@ -11,9 +11,18 @@ and are documented with short docstrings.
 
 import os
 import sys
-import keyManager as keyManager
-import userManager as userManager
-import hostManager as hostManager
+import platformdirs
+
+
+if __package__ is None:
+    import keyManager
+    import userManager
+    import hostManager
+else:
+    from . import keyManager
+    from . import userManager
+    from . import hostManager
+from pathlib import Path
 import yaml
 import signal
 import tempfile
@@ -44,9 +53,36 @@ def exit_gracefully():
 
 
 def main():
+    directory = tempfile.mkdtemp(prefix="goodass-")
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     pwds = {}
-    if os.path.exists("passwords.yaml"):
-        with open("passwords.yaml", "r") as f:
+
+    config_dir = platformdirs.user_config_dir("goodass")
+
+    config_path = os.path.join(config_dir, "ssh-config.yaml")
+
+    if not os.path.exists(config_dir):
+        Path(config_dir).mkdir(parents=True, exist_ok=True)
+
+    if not os.path.exists(config_path):
+        default_config = {"hosts": [], "users": []}
+        with open(config_path, "w") as f:
+            yaml.dump(default_config, f)
+    if not os.path.exists(os.path.join(config_dir, "settings.yaml")):
+        default_settings = {
+            "ssh_private_key_path": "",
+        }
+        with open(os.path.join(config_dir, "settings.yaml"), "w") as f:
+            yaml.dump(default_settings, f)
+
+    with open(os.path.join(config_dir, "settings.yaml"), "r") as f:
+        settings = yaml.safe_load(f)
+        ssh_private_key_path = settings.get("ssh_private_key_path", "")
+
+    directory = platformdirs.user_config_dir("goodass")
+    if os.path.exists(os.path.join(directory, "passwords.yaml")):
+        with open(os.path.join(directory, "passwords.yaml"), "r") as f:
             pass_file = yaml.safe_load(f)
             for host_entry in pass_file.get("hosts", []):
                 for c in host_entry.get("credentials", []):
@@ -57,14 +93,10 @@ def main():
                         pwds[f"{user}@{host}"] = password
         print(pwds)
 
-    directory = tempfile.mkdtemp(prefix="ssh-key-manager-")
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
     signal.signal(signal.SIGINT, signal_handler)
 
     menu = """
-    Welcome to the SSH Key Manager, please select an option:\n
+Welcome to the SSH Key Manager, please select an option:\n
     1. Fetch and display all SSH keys
     2. Fix SSH key issues
     3. Add User
@@ -84,21 +116,31 @@ def main():
         option = input("Enter option number: ")
         os.system("cls" if os.name == "nt" else "clear")
         if option == "1":
-            keyManager.print_keys_table_cli(pwds, directory=directory)
+            keyManager.print_keys_table_cli(
+                pwds,
+                config_path,
+                ssh_private_key_path=ssh_private_key_path,
+                directory=directory,
+            )
         elif option == "2":
-            keyManager.fix_keys_cli(pwds, directory=directory)
+            keyManager.fix_keys_cli(
+                pwds,
+                config_path,
+                ssh_private_key_path=ssh_private_key_path,
+                directory=directory,
+            )
         elif option == "3":
-            userManager.user_add_cli()
+            userManager.user_add_cli(config_path)
         elif option == "4":
-            userManager.user_add_key_cli()
+            userManager.user_add_key_cli(config_path)
         elif option == "5":
-            userManager.user_remove_key_cli()
+            userManager.user_remove_key_cli(config_path)
         elif option == "6":
-            userManager.user_remove_cli()
+            userManager.user_remove_cli(config_path)
         elif option == "7":
-            userManager.user_key_access_cli()
+            userManager.user_key_access_cli(config_path)
         elif option == "8":
-            hostManager.host_cli()
+            hostManager.host_cli(config_path)
         elif option == "9":
             exit_gracefully()
         else:

@@ -14,15 +14,15 @@ dependencies = [
     "prettytable==3.17.0",
     "PyYAML==6.0.3",
     "paramiko==4.0.0",
-]
-[project.scripts]
-goodass = "main.py:main"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+    "platformdirs==4.5.0",
 ]
 license = "Apache-2.0"
 license-files = ["LICEN[CS]E*"]
+
+
+
+[project.scripts]
+goodass = "goodass.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Nidhil-stack/G.O.O.D.A.S.S."

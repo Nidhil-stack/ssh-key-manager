@@ -14,7 +14,9 @@ all_keys = []
 passwords = {}
 
 
-def print_keys_table_cli(pwds, directory="./tempKeys"):
+def print_keys_table_cli(
+    pwds, config_path, ssh_private_key_path, directory="./tempKeys"
+):
     """Fetch and display all SSH keys from configured hosts.
 
     This function retrieves SSH key data from the configuration using
@@ -24,7 +26,7 @@ def print_keys_table_cli(pwds, directory="./tempKeys"):
     """
 
     servers, all_user_keys, all_keys, passwords = get_ssh_keys(
-        "config.yaml", pwds, directory
+        config_path, ssh_private_key_path, pwds, directory
     )
     pwds.update(passwords)
     os.system("cls" if os.name == "nt" else "clear")
@@ -32,7 +34,7 @@ def print_keys_table_cli(pwds, directory="./tempKeys"):
     input("Press Enter to continue...")
 
 
-def fix_keys_cli(pwds, directory="./tempKeys"):
+def fix_keys_cli(pwds, config_path, ssh_private_key_path, directory="./tempKeys"):
     """Run a check-and-fix workflow for SSH keys.
 
     Steps performed:
@@ -48,7 +50,7 @@ def fix_keys_cli(pwds, directory="./tempKeys"):
     """
 
     servers, all_user_keys, all_keys, passwords = get_ssh_keys(
-        "config.yaml", pwds, directory=directory
+        config_path, ssh_private_key_path, pwds, directory=directory
     )
     pwds.update(passwords)
     checked_keys = check_keys(all_user_keys)
@@ -85,11 +87,24 @@ def fix_keys_cli(pwds, directory="./tempKeys"):
     confirmation = input("Result after fix, continue? [y/N]")
     if confirmation.lower() == "y":
         print("Fixing keys...")
-        upload_all_ssh_files(pwds, directory=directory, key_tables=key_tables)
+        upload_all_ssh_files(
+            pwds,
+            directory=directory,
+            ssh_private_key_path=ssh_private_key_path,
+            key_tables=key_tables,
+            config_path=config_path,
+        )
         input("All done! Press Enter to continue...")
 
 
-def upload_all_ssh_files(pwds, key_tables, console_lock=None, directory="./tempKeys"):
+def upload_all_ssh_files(
+    pwds,
+    key_tables,
+    ssh_private_key_path,
+    console_lock=None,
+    directory="./tempKeys",
+    config_path="config.yaml",
+):
     """Upload multiple `authorized_keys` files to their respective servers concurrently.
 
     Parameters:
@@ -103,7 +118,7 @@ def upload_all_ssh_files(pwds, key_tables, console_lock=None, directory="./tempK
     spawns a thread to upload it (using `upload_ssh_file`) and waits for all uploads to finish.
     """
     threads = []
-    servers, _ = fetch_config("config.yaml")
+    servers, _ = fetch_config(config_path)
     if console_lock is None:
         console_lock = threading.Lock()
     for server in servers:
@@ -117,6 +132,7 @@ def upload_all_ssh_files(pwds, key_tables, console_lock=None, directory="./tempK
                     host_user.split("@")[1],
                     host_user.split("@")[0],
                     pwds,
+                    ssh_private_key_path,
                     console_lock,
                     directory,
                 )
@@ -127,7 +143,14 @@ def upload_all_ssh_files(pwds, key_tables, console_lock=None, directory="./tempK
         thread.join()
 
 
-def upload_ssh_file(host, username, pwds, console_lock=None, directory="./tempKeys"):
+def upload_ssh_file(
+    host,
+    username,
+    pwds,
+    ssh_private_key_path,
+    console_lock=None,
+    directory="./tempKeys",
+):
     """Upload a single `authorized_keys` file to a remote user's `.ssh/authorized_keys`.
 
     Attempts key-based authentication first using a local key file (`./key.pem`). If that
@@ -152,7 +175,10 @@ def upload_ssh_file(host, username, pwds, console_lock=None, directory="./tempKe
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             client.connect(
-                host, username=username, password=None, key_filename="./key.pem"
+                host,
+                username=username,
+                password=None,
+                key_filename=ssh_private_key_path,
             )
         except Exception as e:
             if "Authentication failed" in str(e):
@@ -236,7 +262,7 @@ def create_ssh_file(hostname, key_data, directory="./tempKeys"):
     return key_path
 
 
-def get_ssh_keys(file_path, pwds={}, directory="./tempKeys"):
+def get_ssh_keys(file_path, ssh_private_key_path, pwds={}, directory="./tempKeys"):
     """Retrieve SSH keys from all configured servers in the provided config file.
 
     Parameters:
@@ -255,13 +281,21 @@ def get_ssh_keys(file_path, pwds={}, directory="./tempKeys"):
     threads = []
     console_lock = threading.Lock()
     servers, all_user_keys = fetch_config(file_path)
+    if servers is None or len(servers) == 0:
+        print("No servers defined in the configuration file.")
+        return servers, all_user_keys, all_keys, passwords
     for server in servers:
         host = server["host"]
         for user in server["users"]:
             print(f"Fetching keys from {user}@{host}")
             thread = threading.Thread(
                 target=lambda: fetch_authorized_keys(
-                    host, user, console_lock, pwds, directory=directory
+                    host,
+                    user,
+                    console_lock,
+                    pwds,
+                    ssh_private_key_path=ssh_private_key_path,
+                    directory=directory,
                 )
             )
             threads.append(thread)
@@ -322,7 +356,9 @@ def fetch_config(file_path):
     return servers, all_user_keys
 
 
-def fetch_authorized_keys(host, username, console_lock, pwds, directory="./tempKeys"):
+def fetch_authorized_keys(
+    host, username, console_lock, pwds, ssh_private_key_path, directory="./tempKeys"
+):
     """Connect to a remote host and fetch the `authorized_keys` for a user.
 
     Parameters:
@@ -339,7 +375,9 @@ def fetch_authorized_keys(host, username, console_lock, pwds, directory="./tempK
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client.connect(host, username=username, password=None, key_filename="./key.pem")
+        client.connect(
+            host, username=username, password=None, key_filename=ssh_private_key_path
+        )
     except Exception as e:
         if "Authentication failed" in str(e):
             if console_lock:
