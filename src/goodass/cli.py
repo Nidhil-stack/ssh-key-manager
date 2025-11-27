@@ -109,7 +109,7 @@ def main():
                 "Configuration directory does not exist. Please run the program interactively first to set up configuration."
             )
             sys.exit(1)
-        Path(directory).mkdir(parents=True, exist_ok=True)
+        Path(config_dir).mkdir(parents=True, exist_ok=True)
 
     if not os.path.exists(config_path):
         if non_interactive:
