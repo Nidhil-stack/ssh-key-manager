@@ -1,5 +1,8 @@
 # Global Oversight Of Deployed Authorized SSH Settings
 
+
+#THERE ARE SOME NEWS COMING, THE README ISN'T UPDATED, I'LL UPDATE IT AS SOON AS I CAN
+
 A lightweight utility to distribute and manage SSH keys across multiple servers in a secure and repeatable way.
 
 Purpose: automate adding public keys to remote users and manage SSH permissions from a single CLI tool.
