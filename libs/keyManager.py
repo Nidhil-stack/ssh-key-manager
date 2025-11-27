@@ -331,28 +331,27 @@ def fetch_authorized_keys(host, username, console_lock, pwds):
         if "Authentication failed" in str(e):
             if console_lock:
                 console_lock.acquire()
-            try:
-                print("Using password authentication for", f"{username}@{host}")
-                attempts = 0
-                while attempts < 3:
-                    try:
-                        pwd = pwds.get(f"{username}@{host}")
-                        if pwd:
-                            password = pwd
-                        else:
-                            password = getpass.getpass(f"Password for {username}@{host}: ")
-                        passwords[f"{username}@{host}"] = password
-                        client.connect(host, username=username, password=password)
-                        break
-                    except Exception as e:
-                        if "Authentication failed" in str(e):
-                            attempts += 1
-                            print("Authentication failed, please try again.")
-                        else:
-                            print(e)
+                try:
+                    print("Using password authentication for", f"{username}@{host}")
+                    attempts = 0
+                    while attempts < 3:
+                        try:
+                            pwd = pwds.get(f"{username}@{host}")
+                            if pwd:
+                                password = pwd
+                            else:
+                                password = getpass.getpass(f"Password for {username}@{host}: ")
+                            passwords[f"{username}@{host}"] = password
+                            client.connect(host, username=username, password=password)
                             break
-            finally:
-                if console_lock and console_lock.locked():
+                        except Exception as e:
+                            if "Authentication failed" in str(e):
+                                attempts += 1
+                                print("Authentication failed, please try again.")
+                            else:
+                                print(e)
+                                break
+                finally:
                     console_lock.release()
         else:
             raise e
