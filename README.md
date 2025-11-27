@@ -30,7 +30,7 @@ To provide a CLI utility for standardized management and deployment of SSH `auth
 Test the current state:
 
 ```bash
-python src/goodass/cli.py
+python main.py
 ```
 
 ### 🗺️ **Roadmap / TODO**
@@ -44,7 +44,6 @@ python src/goodass/cli.py
 ### 📧 **Contact**
 - **Author:** `Nidhil-stack`
 - **Contributors:**
-
   <a href="https://github.com/EddyDevProject"><img src="https://github.com/EddyDevProject.png" width="60px"/><br /></a>
 
 ---
