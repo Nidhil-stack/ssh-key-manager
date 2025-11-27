@@ -125,6 +125,6 @@ This project is released under the license included in the repository. See the *
 
   * **Author:** `Nidhil-stack`
   * **Contributors:**
-    \<a href="[https://github.com/EddyDevProject](https://github.com/EddyDevProject)"\>\<img src="[https://github.com/EddyDevProject.png](https://github.com/EddyDevProject.png)" width="60px"/\>\<br /\>\</a\>
+    <a href="https://github.com/EddyDevProject"><img src="https://github.com/EddyDevProject.png" width="60px"/><br /></a>
 
 -----
