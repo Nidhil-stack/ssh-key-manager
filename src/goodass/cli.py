@@ -78,7 +78,22 @@ def generate_ssh_keypair(path):
     return private_key.decode(), public_key.decode()
 
 
+def non_interactive_fix_keys(pwds, config_path, ssh_private_key_path, directory):
+    """Non-interactive function to fix SSH keys."""
+    keyManager.fix_keys_cli(
+        pwds,
+        config_path,
+        ssh_private_key_path=ssh_private_key_path,
+        directory=directory,
+        interactive=False,
+    )
+
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--fix-keys":
+        non_interactive = True
+    else:
+        non_interactive = False
     directory = tempfile.mkdtemp(prefix="goodass-")
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -89,13 +104,28 @@ def main():
     config_path = os.path.join(config_dir, "ssh-config.yaml")
 
     if not os.path.exists(config_dir):
+        if non_interactive:
+            print(
+                "Configuration directory does not exist. Please run the program interactively first to set up configuration."
+            )
+            sys.exit(1)
         Path(directory).mkdir(parents=True, exist_ok=True)
 
     if not os.path.exists(config_path):
+        if non_interactive:
+            print(
+                "Configuration file does not exist. Please run the program interactively first to set up configuration."
+            )
+            sys.exit(1)
         default_config = {"hosts": [], "users": []}
         with open(config_path, "w") as f:
             yaml.dump(default_config, f)
     if not os.path.exists(os.path.join(config_dir, "settings.yaml")):
+        if non_interactive:
+            print(
+                "Settings file does not exist. Please run the program interactively first to set up configuration."
+            )
+            sys.exit(1)
         ssh_private_key_path = input(
             "Enter path to the program's SSH private key (leave blank to generate a new id_rsa keypair): "
         )
@@ -135,6 +165,15 @@ def main():
         print(pwds)
 
     signal.signal(signal.SIGINT, signal_handler)
+
+    if non_interactive:
+        non_interactive_fix_keys(
+            pwds,
+            config_path,
+            ssh_private_key_path=ssh_private_key_path,
+            directory=directory,
+        )
+        exit_gracefully()
 
     menu = """
 Welcome to the SSH Key Manager, please select an option:\n

@@ -110,6 +110,7 @@ def user_add_cli(config="config.yaml"):
     Parameters:
     - config (str or dict): Path to the configuration file or configuration dictionary.
     """
+    config_path = config if isinstance(config, str) else "config.yaml"
     if isinstance(config, str):
         config = load_config(config)
     os.system("cls" if os.name == "nt" else "clear")
@@ -121,7 +122,7 @@ def user_add_cli(config="config.yaml"):
     config = user_add_key_cli(config, email=email)
     os.system("cls" if os.name == "nt" else "clear")
     user_print(config)
-    save_config(config)
+    save_config(config, config_path)
     input("Press Enter to continue...")
 
 
@@ -165,6 +166,7 @@ def user_add_key_cli(config="config.yaml", email=None):
     Returns:
     - config (dict): Updated configuration dictionary.
     """
+    config_path = config if isinstance(config, str) else "config.yaml"
     if isinstance(config, str):
         config = load_config(config)
     os.system("cls" if os.name == "nt" else "clear")
@@ -201,7 +203,7 @@ def user_add_key_cli(config="config.yaml", email=None):
             print(
                 "Invalid key format. Please enter the key in the format: <type> <key> [hostname]"
             )
-    save_config(config)
+    save_config(config, config_path)
     return config
 
 
@@ -236,6 +238,7 @@ def user_remove_key_cli(config="config.yaml", email=None):
     Returns:
     - config (dict): Updated configuration dictionary.
     """
+    config_path = config if isinstance(config, str) else "config.yaml"
     if isinstance(config, str):
         config = load_config(config)
     os.system("cls" if os.name == "nt" else "clear")
@@ -285,7 +288,7 @@ def user_remove_key_cli(config="config.yaml", email=None):
                 else:
                     print(f"Key not found for user {user['name']}.")
                     input("Press Enter to continue...")
-    save_config(config)
+    save_config(config, config_path)
 
 
 def user_print_keys(config, email):
@@ -334,6 +337,7 @@ def user_remove_cli(config="config.yaml", email=None):
     Returns:
     - config (dict): Updated configuration dictionary.
     """
+    config_path = config if isinstance(config, str) else "config.yaml"
     if isinstance(config, str):
         config = load_config(config)
     if email is None:
@@ -354,7 +358,7 @@ def user_remove_cli(config="config.yaml", email=None):
     config = user_remove(config, email)
     user_print(config)
     print(f"User with email {email} removed successfully.")
-    save_config(config)
+    save_config(config, config_path)
     input("Press Enter to continue...")
     return config
 
@@ -456,6 +460,7 @@ def user_key_access_cli(config="config.yaml", email=None):
     Returns:
     - config (dict): Updated configuration dictionary.
     """
+    config_path = config if isinstance(config, str) else "config.yaml"
     if isinstance(config, str):
         config = load_config(config)
     os.system("cls" if os.name == "nt" else "clear")
@@ -477,6 +482,7 @@ def user_key_access_cli(config="config.yaml", email=None):
         os.system("cls" if os.name == "nt" else "clear")
         user_print_keys(config, email)
         key_number = input("Insert key number to manage access or 'done' to finish: ")
+        key_value = None
         try:
             key_index = int(key_number) - 1
             users = config.get("users", [])
@@ -493,7 +499,7 @@ def user_key_access_cli(config="config.yaml", email=None):
                         print("Invalid key number.")
                         continue
         except ValueError:
-            if key_number.lower() == "done":
+            if key_number.lower() == "done" or key_number.lower() == "q":
                 break
             print("Invalid input. Please enter a valid key number or 'done'.")
             input("Press Enter to continue...")
@@ -504,7 +510,11 @@ def user_key_access_cli(config="config.yaml", email=None):
             user_input = input(
                 "Type 'add' to add access, 'remove' to remove access, followed by the access you intend to edit in the format username@host (type 'back' or 'done' to finish): \n"
             ).strip()
-            if user_input.lower() == "done" or user_input.lower() == "back":
+            if (
+                user_input.lower() == "done"
+                or user_input.lower() == "back"
+                or user_input.lower() == "q"
+            ):
                 break
             if len(user_input.split()) < 2:
                 print(
@@ -521,13 +531,12 @@ def user_key_access_cli(config="config.yaml", email=None):
             access = {"username": perm.split("@")[0], "host": perm.split("@")[1]}
             if action.lower() == "add":
                 config = user_key_access_add(config, email, key_value, access)
-            elif action.lower() == "remove":
+            elif action.lower() == "remove" or action.lower() == "rm":
                 config = user_key_access_remove(config, email, key_value, access)
             elif action.lower() == "back" or action.lower() == "done":
                 break
             else:
                 print("Invalid action. Please enter 'add', 'remove', or 'done'.")
                 input("Press Enter to continue...")
-    save_config(config)
+    save_config(config, config_path)
     return config
-
