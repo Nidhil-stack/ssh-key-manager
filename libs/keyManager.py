@@ -164,7 +164,10 @@ def upload_ssh_file(host, username, pwds, console_lock=None, directory="./tempKe
                             password = getpass.getpass(
                                 f"Password for {username}@{host}: "
                             )
-                        passwords[f"{username}@{host}"] = password
+                        if console_lock:
+                            pwds[f"{username}@{host}"] = password
+                        else:
+                            pwds[f"{username}@{host}"] = password
                         client.connect(host, username=username, password=password)
                         break
                     except Exception as e:
