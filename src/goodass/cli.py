@@ -26,6 +26,9 @@ from pathlib import Path
 import yaml
 import signal
 import tempfile
+from cryptography.hazmat.primitives import serialization as crypto_serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend as crypto_default_backend
 
 directory = None
 
@@ -52,6 +55,29 @@ def exit_gracefully():
     sys.exit()
 
 
+def generate_ssh_keypair(path):
+    key = rsa.generate_private_key(
+        backend=crypto_default_backend(), public_exponent=65537, key_size=2048
+    )
+
+    private_key = key.private_bytes(
+        crypto_serialization.Encoding.PEM,
+        crypto_serialization.PrivateFormat.PKCS8,
+        crypto_serialization.NoEncryption(),
+    )
+
+    public_key = key.public_key().public_bytes(
+        crypto_serialization.Encoding.OpenSSH, crypto_serialization.PublicFormat.OpenSSH
+    )
+
+    with open(path, "w") as f:
+        f.write(private_key.decode())
+    os.chmod(path, 0o600)
+    with open(f"{path}.pub", "w") as f:
+        f.write(f"{public_key.decode()} goodass_key@generated")
+    return private_key.decode(), public_key.decode()
+
+
 def main():
     directory = tempfile.mkdtemp(prefix="goodass-")
     if not os.path.exists(directory):
@@ -70,11 +96,27 @@ def main():
         with open(config_path, "w") as f:
             yaml.dump(default_config, f)
     if not os.path.exists(os.path.join(config_dir, "settings.yaml")):
-        default_settings = {
-            "ssh_private_key_path": "",
-        }
+        ssh_private_key_path = input(
+            "Enter path to the program's SSH private key (leave blank to generate a new id_rsa keypair): "
+        )
+        _, public_key = generate_ssh_keypair(os.path.join(config_dir, "goodass_id_rsa"))
+        settings = {"ssh_private_key_path": ssh_private_key_path}
         with open(os.path.join(config_dir, "settings.yaml"), "w") as f:
-            yaml.dump(default_settings, f)
+            yaml.dump(settings, f)
+        with open(os.path.join(config_dir, "config.yaml"), "r") as f:
+            config = yaml.safe_load(f)
+            config["users"].append(
+                {
+                    "username": "goodass_user",
+                    "keys": [
+                        {
+                            "type": public_key.split(" ")[0],
+                            "key": public_key.split(" ")[1],
+                            "hostname": "goodass_key@generated",
+                        }
+                    ],
+                }
+            )
 
     with open(os.path.join(config_dir, "settings.yaml"), "r") as f:
         settings = yaml.safe_load(f)
