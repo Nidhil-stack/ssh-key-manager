@@ -11,7 +11,7 @@ This document provides installation instructions and operational guidelines for 
 Install the package using **pip** from the provided Wheel file:
 
 ```bash
-pip install download_directory/dist/goodass-0.0.3-py3-none-any.whl
+pip install download_directory/dist/goodass-0.0.4-py3-none-any.whl
 ```
 
 ### 🚀 First Run and Setup Wizard
@@ -47,6 +47,9 @@ ssh_private_key_path: /absolute/path/to/your/key
 
 You can always **manually create or edit** this file, or provide a full configuration in the optional **`config.yaml`** file to bypass the initial wizard prompts.
 
+> **❗ Error Handling Note**
+> All program errors, warnings, and log messages are output to the terminal in **Interactive Mode**. If running in **Non-Interactive Mode** (e.g., using `--fix-keys`), these messages are **redirected and saved** in files within the same **configuration directory** (e.g., `~/.config/goodass/`). This is essential for debugging and reporting issues in automated runs.
+
 -----
 
 ## ⚠️ Optional Password Configuration (Use with Caution)
@@ -63,6 +66,10 @@ An optional **`passwords.yaml`** file can be placed in the same configuration di
 
 ## 🛠️ Typical Workflow
 
+The program can be run in two modes: **Interactive** (default) or **Non-Interactive** (for scripting/automation).
+
+### 🖥️ Interactive Mode (Default)
+
 1.  **Verify Connectivity:** Ensure basic SSH connectivity is working for all target hosts.
 2.  **Run Program:**
     ```bash
@@ -71,6 +78,16 @@ An optional **`passwords.yaml`** file can be placed in the same configuration di
 3.  **Main Operations:** Use the interactive program (or wizard) to:
       * Add **hosts**, **users**, and associated **keys**.
       * Launch the **"fix keys" utility**, which synchronizes your configured keys to the `authorized_keys` file on all added hosts.
+
+### 🤖 Non-Interactive Mode (For Automation)
+
+You can now automatically run the key synchronization utility without any user prompts using the `--fix-keys` argument. This is ideal for cron jobs or automated deployments.
+
+  * **Command:** Execute the key fix operation directly:
+    ```bash
+    goodass --fix-keys
+    ```
+    This command will read the existing configuration and immediately synchronize the configured keys across all registered hosts.
 
 -----
 
@@ -109,9 +126,14 @@ An optional **`passwords.yaml`** file can be placed in the same configuration di
 
 ## 🗺️ Roadmap / TODO
 
-  * Implement a **non-interactive mode** for automated scripting.
-  * Consider adding a small **Text User Interface (TUI)** for quick configuration.
+> Completion of the remaining items in this list will trigger the **Version 1.0.0** release.
+
+  * Implement a **comprehensive logging system** to capture more than just errors, including operational details, warnings, and success messages.
+  * **Limit multi-threaded jobs against one host** to prevent unintentionally overwhelming the target server (e.g., avoiding a self-inflicted Distributed Denial of Service, or DDoS).
   * Add functionality to synchronize **`config.yaml`** with a remote server via **SFTP**, enabling configuration collaboration among multiple users.
+
+> **Future Goal: Version 2.0 Consideration**
+> The introduction of a small **Text User Interface (TUI)** is being considered, but will be reserved as a major development goal for **Version 2.0**.
 
 -----
 
@@ -125,6 +147,6 @@ This project is released under the license included in the repository. See the *
 
   * **Author:** `Nidhil-stack`
   * **Contributors:**
-    <a href="https://github.com/EddyDevProject"><img src="https://github.com/EddyDevProject.png" width="60px"/><br /></a>
+    \<a href="[https://github.com/EddyDevProject](https://github.com/EddyDevProject)"\>\<img src="[https://github.com/EddyDevProject.png](https://github.com/EddyDevProject.png)" width="60px"/\>\<br /\>\</a\>
 
 -----
