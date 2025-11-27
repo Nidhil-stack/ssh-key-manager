@@ -205,8 +205,10 @@ def upload_ssh_file(host, username, pwds, console_lock=None, directory="./tempKe
                     console_lock.release()
                 sftp.close()
                 client.close()
-
-
+            else:
+                sftp.close()
+                client.close()
+                raise
 def create_ssh_file(hostname, key_data, directory="./tempKeys"):
     """Create a temporary `authorized_keys` file locally for a given host/user.
 
