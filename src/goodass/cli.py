@@ -89,7 +89,7 @@ def main():
     config_path = os.path.join(config_dir, "ssh-config.yaml")
 
     if not os.path.exists(config_dir):
-        Path(directory).mkdir(parents=True, exist_ok=True)
+        Path(config_dir).mkdir(parents=True, exist_ok=True)
 
     if not os.path.exists(config_path):
         default_config = {"hosts": [], "users": []}
