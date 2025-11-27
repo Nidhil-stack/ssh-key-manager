@@ -78,8 +78,12 @@ def generate_ssh_keypair(path):
     return private_key.decode(), public_key.decode()
 
 
-def non_interactive_fix_keys(pwds, config_path, ssh_private_key_path, directory):
+def non_interactive_fix_keys(
+    pwds, config_dir, config_path, ssh_private_key_path, directory
+):
     """Non-interactive function to fix SSH keys."""
+    err_log_path = os.path.join(config_dir, "goodass_error_log.txt")
+    sys.stderr = open(err_log_path, "w")
     keyManager.fix_keys_cli(
         pwds,
         config_path,
@@ -169,6 +173,7 @@ def main():
     if non_interactive:
         non_interactive_fix_keys(
             pwds,
+            config_dir,
             config_path,
             ssh_private_key_path=ssh_private_key_path,
             directory=directory,
@@ -221,7 +226,7 @@ Welcome to the SSH Key Manager, please select an option:\n
             userManager.user_key_access_cli(config_path)
         elif option == "8":
             hostManager.host_cli(config_path)
-        elif option == "9":
+        elif option == "9" or option.lower() == "exit" or option.lower() == "q":
             exit_gracefully()
         else:
             print("Invalid option selected.")

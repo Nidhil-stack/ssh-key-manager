@@ -158,6 +158,7 @@ def upload_all_ssh_files(
                     ssh_private_key_path,
                     console_lock,
                     directory,
+                    interactive,
                 )
             )
             threads.append(thread)
@@ -212,9 +213,13 @@ def upload_ssh_file(
                     try:
                         client.connect(host, username=username, password=pwd)
                     except Exception as pwd_e:
-                        raise Exception(f"Authentication failed for {username}@{host} in non-interactive mode") from pwd_e
+                        raise Exception(
+                            f"Authentication failed for {username}@{host} in non-interactive mode"
+                        ) from pwd_e
                 else:
-                    raise Exception(f"No password available for {username}@{host} in non-interactive mode") from e
+                    raise Exception(
+                        f"No password available for {username}@{host} in non-interactive mode"
+                    ) from e
             elif "Authentication failed" in str(e):
                 if console_lock:
                     console_lock.acquire()
@@ -431,9 +436,13 @@ def fetch_authorized_keys(
                 try:
                     client.connect(host, username=username, password=pwd)
                 except Exception as pwd_e:
-                    raise Exception(f"Authentication failed for {username}@{host} in non-interactive mode") from pwd_e
+                    raise Exception(
+                        f"Authentication failed for {username}@{host} in non-interactive mode"
+                    ) from pwd_e
             else:
-                raise Exception(f"No password available for {username}@{host} in non-interactive mode") from e
+                raise Exception(
+                    f"No password available for {username}@{host} in non-interactive mode"
+                ) from e
         elif "Authentication failed" in str(e):
             if console_lock:
                 console_lock.acquire()
