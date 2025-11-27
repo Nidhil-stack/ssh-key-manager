@@ -23,8 +23,6 @@ pwds = {}
 # directory = "./tempKeys"
 # chose tmp dir based on os in the equivalent of /tmp
 directory = tempfile.mkdtemp(prefix="ssh-key-manager-")
-print(f"Using temporary directory: {directory}")
-input("Press Enter to continue...")
 
 if not os.path.exists(directory):
     os.makedirs(directory)
