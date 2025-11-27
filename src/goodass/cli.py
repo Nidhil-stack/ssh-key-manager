@@ -63,7 +63,7 @@ def main():
     config_path = os.path.join(config_dir, "ssh-config.yaml")
 
     if not os.path.exists(config_dir):
-        Path(config_dir).mkdir(parents=True, exist_ok=True)
+        Path(directory).mkdir(parents=True, exist_ok=True)
 
     if not os.path.exists(config_path):
         default_config = {"hosts": [], "users": []}
@@ -80,7 +80,6 @@ def main():
         settings = yaml.safe_load(f)
         ssh_private_key_path = settings.get("ssh_private_key_path", "")
 
-    directory = platformdirs.user_config_dir("goodass")
     if os.path.exists(os.path.join(directory, "passwords.yaml")):
         with open(os.path.join(directory, "passwords.yaml"), "r") as f:
             pass_file = yaml.safe_load(f)
