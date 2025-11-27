@@ -152,40 +152,65 @@ def upload_ssh_file(host, username, pwds, console_lock=None, directory="./tempKe
             )
         except Exception as e:
             if "Authentication failed" in str(e):
-                # check that the console lock exists
                 if console_lock:
                     console_lock.acquire()
-                # allow password auth if key auth fails, 3 attempts
-                attempts = 0
-                while attempts < 3:
-                    try:
-                        pwd = pwds.get(f"{username}@{host}")
-                        if pwd:
-                            password = pwd
-                        else:
-                            password = getpass.getpass(
-                                f"Password for {username}@{host}: "
-                            )
-                        passwords[f"{username}@{host}"] = password
-                        client.connect(host, username=username, password=password)
-                        if console_lock:
-                            console_lock.release()
-                        break
-                    except Exception as e:
-                        if "Authentication failed" in str(e):
-                            attempts += 1
-                            print("Authentication failed, please try again.")
-                        else:
-                            raise e
+                try:
+                    attempts = 0
+                    while attempts < 3:
+                        try:
+                            pwd = pwds.get(f"{username}@{host}")
+                            if pwd:
+                                password = pwd
+                            else:
+                                password = getpass.getpass(
+                                    f"Password for {username}@{host}: "
+                                )
+                            passwords[f"{username}@{host}"] = password
+                            client.connect(host, username=username, password=password)
+                            break
+                        except Exception as e:
+                            if "Authentication failed" in str(e):
+                                attempts += 1
+                                print("Authentication failed, please try again.")
+                            else:
+                                raise e
+                finally:
+                    if console_lock and console_lock.locked():
+                        console_lock.release()
             else:
                 raise e
-        sftp = client.open_sftp()
-        sftp.put(
-            os.path.join(directory, f"{username}@{host}.authorized_keys"),
-            f"/home/{username}/.ssh/authorized_keys",
-        )
-        sftp.close()
-        client.close()
+        if console_lock and console_lock.locked():
+            console_lock.release()
+        sftp = None
+        try:
+            sftp = client.open_sftp()
+            if username == "root":
+                sftp.put(
+                    os.path.join(directory, f"root@{host}.authorized_keys"),
+                    "/root/.ssh/authorized_keys",
+                )
+            else:
+                sftp.put(
+                    os.path.join(directory, f"{username}@{host}.authorized_keys"),
+                    f"/home/{username}/.ssh/authorized_keys",
+                )
+        except Exception as e:
+            if console_lock:
+                console_lock.acquire()
+            if "No such file" in str(e):
+                print(
+                    f"Remote .ssh directory does not exist for {username}@{host}. Upload failed."
+                )
+                if console_lock:
+                    console_lock.release()
+            else:
+                if console_lock and console_lock.locked():
+                    console_lock.release()
+                raise e
+        finally:
+            if sftp:
+                sftp.close()
+            client.close()
 
 
 def create_ssh_file(hostname, key_data, directory="./tempKeys"):
@@ -310,49 +335,64 @@ def fetch_authorized_keys(host, username, console_lock, pwds):
         client.connect(host, username=username, password=None, key_filename="./key.pem")
     except Exception as e:
         if "Authentication failed" in str(e):
-            # check that the console lock exists
             if console_lock:
                 console_lock.acquire()
-            # allow password auth if key auth fails, 3 attempts
-            attempts = 0
-            while attempts < 3:
-                try:
-                    pwd = pwds.get(f"{username}@{host}")
-                    if pwd:
-                        password = pwd
-                    else:
-                        password = getpass.getpass(f"Password for {username}@{host}: ")
-                    passwords[f"{username}@{host}"] = password
-                    client.connect(host, username=username, password=password)
-                    if console_lock:
-                        console_lock.release()
-                    break
-                except Exception as e:
-                    if "Authentication failed" in str(e):
-                        attempts += 1
-                        print("Authentication failed, please try again.")
-                    else:
-                        print(e)
+            try:
+                print("Using password authentication for", f"{username}@{host}")
+                attempts = 0
+                while attempts < 3:
+                    try:
+                        pwd = pwds.get(f"{username}@{host}")
+                        if pwd:
+                            password = pwd
+                        else:
+                            password = getpass.getpass(f"Password for {username}@{host}: ")
+                        passwords[f"{username}@{host}"] = password
+                        client.connect(host, username=username, password=password)
                         break
+                    except Exception as e:
+                        if "Authentication failed" in str(e):
+                            attempts += 1
+                            print("Authentication failed, please try again.")
+                        else:
+                            print(e)
+                            break
+            finally:
+                if console_lock:
+                    console_lock.release()
         else:
             raise e
     sftp = client.open_sftp()
     try:
-        sftp.get(
-            f"/home/{username}/.ssh/authorized_keys",
-            f"./tempKeys/authorized_keys_{host}_{username}",
-        )
+        sftp = client.open_sftp()
+        if username == "root":
+            sftp.get(
+                "/root/.ssh/authorized_keys",
+                f"./tempKeys/authorized_keys_{host}_{username}",
+            )
+        else:
+            sftp.get(
+                f"/home/{username}/.ssh/authorized_keys",
+                f"./tempKeys/authorized_keys_{host}_{username}",
+            )
         keys = parse_authorized_keys(f"./tempKeys/authorized_keys_{host}_{username}")
     except Exception as e:
         if "No such file" in str(e):
+            if console_lock:
+                console_lock.acquire()
             print(f"No authorized_keys file for {username}@{host}, skipping.")
-            keys = []
+            open(f"./tempKeys/authorized_keys_{host}_{username}", "w").close()
+            if console_lock:
+                console_lock.release()
         else:
             raise e
+    finally:
+        if sftp:
+            sftp.close()
+        client.close()
 
-    os.remove(f"./tempKeys/authorized_keys_{host}_{username}")
-    sftp.close()
-    client.close()
+    if os.path.exists(f"./tempKeys/authorized_keys_{host}_{username}"):
+        os.remove(f"./tempKeys/authorized_keys_{host}_{username}")
     if not keys:
         return
     for key in keys:  # check if key already exists in all_keys
