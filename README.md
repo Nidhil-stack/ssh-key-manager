@@ -38,6 +38,7 @@ python main.py
   * Non-interactive mode.
   * Configuration TUI.
   * SFTP synchronization for `config.yaml`.
+  * WIP pip packaging and standardization of files locations
 
 -----
 
