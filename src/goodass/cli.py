@@ -151,6 +151,8 @@ def main():
                     ],
                 }
             )
+            with open(config_path, "w") as f:
+                yaml.dump(config, f)
 
     with open(os.path.join(config_dir, "settings.yaml"), "r") as f:
         settings = yaml.safe_load(f)
