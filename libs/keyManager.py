@@ -195,7 +195,7 @@ def upload_ssh_file(host, username, pwds, console_lock=None, directory="./tempKe
                 console_lock.acquire()
             if "No such file" in str(e):
                 print(
-                    f"File path does not exist on {username}@{host}, creating .ssh directory."
+                    f"File path does not exist on {username}@{host}. Please ensure .ssh directory exists."
                 )
                 if console_lock:
                     console_lock.release()
