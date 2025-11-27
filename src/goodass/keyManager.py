@@ -428,9 +428,12 @@ def fetch_authorized_keys(
         if "Authentication failed" in str(e) and not interactive:
             pwd = pwds.get(f"{username}@{host}")
             if pwd:
-                client.connect(host, username=username, password=pwd)
+                try:
+                    client.connect(host, username=username, password=pwd)
+                except Exception as pwd_e:
+                    raise Exception(f"Authentication failed for {username}@{host} in non-interactive mode") from pwd_e
             else:
-                raise e
+                raise Exception(f"No password available for {username}@{host} in non-interactive mode") from e
         elif "Authentication failed" in str(e):
             if console_lock:
                 console_lock.acquire()
