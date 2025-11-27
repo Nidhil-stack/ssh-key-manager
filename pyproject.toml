@@ -3,7 +3,7 @@ requires = ["pdm-backend >= 2.4.0"]
 build-backend = "pdm.backend"
 [project]
 name = "goodass"
-version = "0.0.4"
+version = "0.0.5"
 authors = [
   { name="Nicholas Ciardiello", email="nicholasciardiello2000@gmail.com" },
 ]
