@@ -154,18 +154,30 @@ def upload_all_ssh_files(
         for host in unique_hosts:
             host_semaphores[host] = threading.Semaphore(max_threads_per_host)
 
-    def upload_with_semaphore(host, username, pwds, ssh_private_key_path, console_lock, directory, interactive):
+    def upload_with_semaphore(
+        host, username, pwds, ssh_private_key_path, console_lock, directory, interactive
+    ):
         semaphore = host_semaphores.get(host)
         if semaphore:
             with semaphore:
                 upload_ssh_file(
-                    host, username, pwds, ssh_private_key_path,
-                    console_lock, directory, interactive
+                    host,
+                    username,
+                    pwds,
+                    ssh_private_key_path,
+                    console_lock,
+                    directory,
+                    interactive,
                 )
         else:
             upload_ssh_file(
-                host, username, pwds, ssh_private_key_path,
-                console_lock, directory, interactive
+                host,
+                username,
+                pwds,
+                ssh_private_key_path,
+                console_lock,
+                directory,
+                interactive,
             )
 
     for key_table in key_tables.items():
@@ -176,7 +188,15 @@ def upload_all_ssh_files(
         upload_user = host_user.split("@")[0]
         thread = threading.Thread(
             target=upload_with_semaphore,
-            args=(upload_host, upload_user, pwds, ssh_private_key_path, console_lock, directory, interactive)
+            args=(
+                upload_host,
+                upload_user,
+                pwds,
+                ssh_private_key_path,
+                console_lock,
+                directory,
+                interactive,
+            ),
         )
         threads.append(thread)
         thread.start()
@@ -356,20 +376,30 @@ def get_ssh_keys(
             host = server["host"]
             host_semaphores[host] = threading.Semaphore(max_threads_per_host)
 
-    def fetch_with_semaphore(host, user, console_lock, pwds, ssh_private_key_path, directory, interactive):
+    def fetch_with_semaphore(
+        host, user, console_lock, pwds, ssh_private_key_path, directory, interactive
+    ):
         semaphore = host_semaphores.get(host)
         if semaphore:
             with semaphore:
                 fetch_authorized_keys(
-                    host, user, console_lock, pwds,
+                    host,
+                    user,
+                    console_lock,
+                    pwds,
                     ssh_private_key_path=ssh_private_key_path,
-                    directory=directory, interactive=interactive
+                    directory=directory,
+                    interactive=interactive,
                 )
         else:
             fetch_authorized_keys(
-                host, user, console_lock, pwds,
+                host,
+                user,
+                console_lock,
+                pwds,
                 ssh_private_key_path=ssh_private_key_path,
-                directory=directory, interactive=interactive
+                directory=directory,
+                interactive=interactive,
             )
 
     for server in servers:
@@ -379,7 +409,15 @@ def get_ssh_keys(
                 print(f"Fetching keys from {user}@{host}")
             thread = threading.Thread(
                 target=fetch_with_semaphore,
-                args=(host, user, console_lock, pwds, ssh_private_key_path, directory, interactive)
+                args=(
+                    host,
+                    user,
+                    console_lock,
+                    pwds,
+                    ssh_private_key_path,
+                    directory,
+                    interactive,
+                ),
             )
             threads.append(thread)
             thread.start()

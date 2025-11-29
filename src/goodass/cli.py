@@ -131,7 +131,6 @@ def main():
     if verbosity != "DEBUG":
         err_log_path = os.path.join(config_dir, "goodass_error_log.txt")
         stderr_file = open(err_log_path, "w")
-        utils.stderr_file = stderr_file
         sys.stderr = stderr_file
 
     if non_interactive:
