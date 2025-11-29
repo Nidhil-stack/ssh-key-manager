@@ -52,8 +52,9 @@ def settings_cli(config_dir, config_path):
         print(
             f"  3. max_threads_per_host: {ssh_config.get('max_threads_per_host', '(not set)')}"
         )
+        print(f"  4. gpg_home: {settings.get('gpg_home', '(not set)')}")
         print("\nOptions:")
-        print("  Enter 1, 2, or 3 to edit the corresponding setting")
+        print("  Enter 1, 2, 3, or 4 to edit the corresponding setting")
         print("  Enter 'done' or 'q' to return to main menu")
 
         choice = input("\nEnter your choice: ").strip().lower()
@@ -66,6 +67,8 @@ def settings_cli(config_dir, config_path):
             settings = edit_verbosity(settings)
         elif choice == "3":
             ssh_config = edit_max_threads_per_host(ssh_config, config_path)
+        elif choice == "4":
+            settings = edit_gpg_home(settings)
         else:
             print("Invalid choice. Please try again.")
             input("Press Enter to continue...")
@@ -241,3 +244,46 @@ def edit_max_threads_per_host(ssh_config, config_path):
 
     input("\nPress Enter to continue...")
     return ssh_config
+
+
+def edit_gpg_home(settings):
+    """Edit the gpg_home setting (GPG private key location).
+
+    Parameters:
+    - settings (dict): Current settings dictionary.
+
+    Returns:
+    - settings (dict): Updated settings dictionary.
+    """
+    os.system("cls" if os.name == "nt" else "clear")
+    print("=== Edit GPG Home Directory ===\n")
+    current_value = settings.get("gpg_home", "")
+    print(f"Current value: {current_value if current_value else '(not set - using system default)'}")
+    print("\nEnter path to the GPG home directory (where your GPG private keys are stored).")
+    print("Leave blank to use the system default (~/.gnupg).")
+    print("(Use Tab for path completion)")
+
+    new_path = autocomplete.input_with_path_completion(
+        "\nNew path (or blank for default): "
+    ).strip()
+
+    if not new_path:
+        if "gpg_home" in settings:
+            del settings["gpg_home"]
+        print("GPG home setting cleared. Using system default.")
+    else:
+        new_path = os.path.expanduser(new_path)
+        if os.path.exists(new_path) and os.path.isdir(new_path):
+            settings["gpg_home"] = new_path
+            print(f"\nGPG home updated to: {new_path}")
+        else:
+            print(f"\nWarning: Path '{new_path}' does not exist or is not a directory.")
+            confirm = input("Save anyway? (y/N): ").strip().lower()
+            if confirm == "y":
+                settings["gpg_home"] = new_path
+                print(f"GPG home updated to: {new_path}")
+            else:
+                print("Path not updated.")
+
+    input("\nPress Enter to continue...")
+    return settings

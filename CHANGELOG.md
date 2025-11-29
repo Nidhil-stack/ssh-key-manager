@@ -1,5 +1,65 @@
 # Changelog
 
+## Version 0.3.0-pre
+
+### ✨ New Features
+
+#### Remote Sync via SFTP
+- **New `syncManager.py` module**: Synchronize ssh-config.yaml with remote servers via SFTP
+  - Add/remove remote sync servers with custom paths
+  - Upload config to all configured servers
+  - Download config from any configured server
+  - **Autosync on startup**: Automatically sync configuration when the program starts
+  - Remote path defaults to the standard config location (`~/.config/goodass/ssh-config.yaml`)
+  - Sync server configuration is stored in the ssh-config.yaml file itself
+
+#### Multi-File Support
+- **New `multiFileManager.py` module**: Work with multiple ssh-config.yaml files simultaneously
+  - Add/remove config files with custom names
+  - Select which files to use (single, multiple, or all)
+  - Merge multiple configs as if they were a single file
+  - Remember last selection and use it automatically on startup
+  - Prompt for file selection only when multiple files exist and no prior selection is found
+  - Quick "all" option to select all files at once
+
+#### GPG Encryption Support
+- **New `gpgManager.py` module**: Protect config files with GPG encryption
+  - Support for multiple GPG public keys (any one can unlock the file)
+  - Add keys from system keyring or import from file
+  - Remove GPG public keys from configuration
+  - List available keys in system keyring
+  - Encrypt/decrypt config files
+  - GPG public keys are stored in the ssh-config.yaml file itself
+
+#### Settings Enhancements
+- **GPG Home Directory**: New setting for specifying GPG private key location
+  - Configurable via Settings menu (option 4)
+  - Defaults to system default (~/.gnupg) if not set
+
+### 🎨 UI Changes
+
+#### Updated Main Menu (8 options + exit)
+1. Fetch and display all SSH keys
+2. Fix SSH key issues
+3. Manage Users
+4. Manage Hosts
+5. Manage Remote Sync (new)
+6. Manage GPG Keys (new)
+7. Manage Config Files (new)
+8. Edit Settings
+
+9. Exit
+
+### 📦 Dependencies
+- Added `python-gnupg==0.5.4` for GPG encryption support
+
+### 🔧 Technical Details
+- All new features are implemented as separate modules for clean code organization
+- Consistent UI patterns matching existing menus (add/remove with tab completion)
+- Sync server and GPG key configurations are stored in ssh-config.yaml for portability
+
+---
+
 ## Version 0.1.1
 
 ### ✨ New Features

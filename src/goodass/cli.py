@@ -20,12 +20,18 @@ if __package__ is None:
     import hostManager
     import utils
     import settingsManager
+    import syncManager
+    import gpgManager
+    import multiFileManager
 else:
     from . import keyManager
     from . import userManager
     from . import hostManager
     from . import utils
     from . import settingsManager
+    from . import syncManager
+    from . import gpgManager
+    from . import multiFileManager
 from pathlib import Path
 import yaml
 import signal
@@ -133,6 +139,12 @@ def main():
         stderr_file = open(err_log_path, "w")
         sys.stderr = stderr_file
 
+    # Check for multi-file setup and prompt for selection if needed
+    settings = multiFileManager.file_selection_prompt(settings, config_dir)
+
+    # Perform autosync if enabled
+    syncManager.perform_autosync(config_path, ssh_private_key_path)
+
     if non_interactive:
         keyManager.non_interactive_fix_keys(
             pwds,
@@ -143,14 +155,17 @@ def main():
         utils.exit_gracefully()
 
     menu = """
-Welcome to the SSH Key Manager, please select an option:\n
+Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:\n
     1. Fetch and display all SSH keys
     2. Fix SSH key issues
     3. Manage Users
     4. Manage Hosts
-    5. Edit Settings
+    5. Manage Remote Sync
+    6. Manage GPG Keys
+    7. Manage Config Files
+    8. Edit Settings
     
-    6. Exit
+    9. Exit
     """
 
     #### Main CLI Loop ####
@@ -178,8 +193,19 @@ Welcome to the SSH Key Manager, please select an option:\n
         elif option == "4":
             hostManager.host_cli(config_path)
         elif option == "5":
+            syncManager.sync_cli(config_dir, config_path, ssh_private_key_path)
+        elif option == "6":
+            gpgManager.gpg_cli(config_dir, config_path, settings)
+        elif option == "7":
+            multiFileManager.multifile_cli(config_dir)
+            # Reload settings after multi-file management
+            settings = multiFileManager.load_settings(config_dir)
+        elif option == "8":
             ssh_private_key_path = settingsManager.settings_cli(config_dir, config_path)
-        elif option == "6" or option.lower() == "exit" or option.lower() == "q":
+            # Reload settings to get updated gpg_home
+            with open(os.path.join(config_dir, "settings.yaml"), "r") as f:
+                settings = yaml.safe_load(f) or {}
+        elif option == "9" or option.lower() == "exit" or option.lower() == "q":
             utils.exit_gracefully()
         else:
             print("Invalid option selected.")
