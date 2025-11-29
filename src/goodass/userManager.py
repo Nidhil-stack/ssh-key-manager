@@ -540,3 +540,54 @@ def user_key_access_cli(config="config.yaml", email=None):
                 input("Press Enter to continue...")
     save_config(config, config_path)
     return config
+
+
+def user_cli(config="config.yaml"):
+    """CLI for managing users in the configuration.
+
+    Parameters:
+    - config (str or dict): Either a string specifying the path to the configuration file (default: 'config.yaml'),
+      or a dictionary containing the loaded configuration. If a string is provided, the configuration will be loaded from the file.
+    """
+    config_path = config if isinstance(config, str) else "config.yaml"
+    if isinstance(config, str):
+        config = load_config(config)
+
+    user_menu = """
+User Management Menu:
+
+    1. Add User
+    2. Add Key(s) to User
+    3. Remove Key from User
+    4. Remove User
+    5. Manage User Key Access
+
+    6. Back to Main Menu
+    """
+
+    while True:
+        os.system("cls" if os.name == "nt" else "clear")
+        user_print(config)
+        print(user_menu)
+        option = input("Enter option number: ")
+        os.system("cls" if os.name == "nt" else "clear")
+        if option == "1":
+            user_add_cli(config_path)
+            config = load_config(config_path)
+        elif option == "2":
+            user_add_key_cli(config_path)
+            config = load_config(config_path)
+        elif option == "3":
+            user_remove_key_cli(config_path)
+            config = load_config(config_path)
+        elif option == "4":
+            user_remove_cli(config_path)
+            config = load_config(config_path)
+        elif option == "5":
+            user_key_access_cli(config_path)
+            config = load_config(config_path)
+        elif option == "6" or option.lower() == "back" or option.lower() == "q":
+            return
+        else:
+            print("Invalid option selected.")
+            input("Press Enter to continue...")
