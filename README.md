@@ -50,7 +50,7 @@ A minimal `settings.yaml` file looks like this:
 ssh_private_key_path: /absolute/path/to/your/key
 ```
 
-You can always **manually create or edit** this file, or provide a full configuration in the optional **`config.yaml`** file to bypass the initial wizard prompts.
+You can always **manually create or edit** this file, or provide a full configuration in the optional **`ssh-config.yaml`** file to bypass the initial wizard prompts.
 
 ### 🔒 Thread Limiting (Optional)
 
@@ -115,13 +115,13 @@ You can now automatically run the key synchronization utility without any user p
 
   * **Private Keys:** **Do not** commit private keys to the source code repository. Store them in a secure location.
   * **Permissions:** Restrict access to private keys using strict file permissions (e.g., `chmod 600 /path/to/private/key`).
-  * **Public Keys:** Public keys can be safely included in the **`config.yaml`** for distribution.
+  * **Public Keys:** Public keys can be safely included in the **`ssh-config.yaml`** for distribution.
 
 -----
 
 ## 🛡️ Security Best Practices
 
-  * **Sensitive Data:** **Never** include passwords or private keys directly in **`config.yaml`** or commit them to source control.
+  * **Sensitive Data:** **Never** include passwords or private keys directly in **`ssh-config.yaml`** or commit them to source control.
   * **Agent Usage:** Utilize an **SSH agent** or rely on the local file paths with restrictive permissions defined in **`settings.yaml`** to prevent accidental exposure.
   * **Pre-Distribution Checks:** Before mass-distributing keys, verify the remote user permissions and the existing SSH policies (`sshd_config`) on the destination servers.
 
@@ -150,7 +150,7 @@ You can now automatically run the key synchronization utility without any user p
 
   * Implement a **comprehensive logging system** to capture more than just errors, including operational details, warnings, and success messages.
   * ~~**Limit multi-threaded jobs against one host** to prevent unintentionally overwhelming the target server (e.g., avoiding a self-inflicted Distributed Denial of Service, or DDoS).~~ ✅ **Implemented** - Use the `max_threads_per_host` setting in `ssh-config.yaml`.
-  * Add functionality to synchronize **`config.yaml`** with a remote server via **SFTP**, enabling configuration collaboration among multiple users.
+  * Add functionality to synchronize **`ssh-config.yaml`** with a remote server via **SFTP**, enabling configuration collaboration among multiple users.
 
 > **Future Goal: Version 2.0 Consideration**
 > The introduction of a small **Text User Interface (TUI)** is being considered, but will be reserved as a major development goal for **Version 2.0**.
