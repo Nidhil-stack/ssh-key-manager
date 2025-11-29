@@ -79,7 +79,7 @@ def generate_ssh_keypair(path):
 
 
 def settings_cli(config_dir, config_path):
-    """CLI for managing settings.yaml.
+    """CLI for managing settings.yaml and ssh-config.yaml.
     
     Parameters:
     - config_dir (str): Path to the configuration directory.
@@ -97,13 +97,21 @@ def settings_cli(config_dir, config_path):
     else:
         settings = {}
     
+    # Load ssh-config for max_threads_per_host
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            ssh_config = yaml.safe_load(f) or {}
+    else:
+        ssh_config = {}
+    
     while True:
         os.system("cls" if os.name == "nt" else "clear")
         print("=== Settings Configuration ===\n")
-        print("Current settings:")
+        print("Current settings (from settings.yaml):")
         print(f"  1. ssh_private_key_path: {settings.get('ssh_private_key_path', '(not set)')}")
         print(f"  2. verbosity: {settings.get('verbosity', '(not set)')}")
-        print(f"  3. max_threads_per_host: {settings.get('max_threads_per_host', '(not set)')}")
+        print("\nCurrent settings (from ssh-config.yaml):")
+        print(f"  3. max_threads_per_host: {ssh_config.get('max_threads_per_host', '(not set)')}")
         print("\nOptions:")
         print("  Enter 1, 2, or 3 to edit the corresponding setting")
         print("  Enter 'done' or 'q' to return to main menu")
@@ -117,7 +125,7 @@ def settings_cli(config_dir, config_path):
         elif choice == '2':
             settings = edit_verbosity(settings)
         elif choice == '3':
-            settings = edit_max_threads_per_host(settings)
+            ssh_config = edit_max_threads_per_host(ssh_config, config_path)
         else:
             print("Invalid choice. Please try again.")
             input("Press Enter to continue...")
@@ -246,18 +254,19 @@ def edit_verbosity(settings):
     return settings
 
 
-def edit_max_threads_per_host(settings):
-    """Edit the max_threads_per_host setting.
+def edit_max_threads_per_host(ssh_config, config_path):
+    """Edit the max_threads_per_host setting in ssh-config.yaml.
     
     Parameters:
-    - settings (dict): Current settings dictionary.
+    - ssh_config (dict): Current ssh-config dictionary.
+    - config_path (str): Path to the ssh-config.yaml file.
     
     Returns:
-    - settings (dict): Updated settings dictionary.
+    - ssh_config (dict): Updated ssh-config dictionary.
     """
     os.system("cls" if os.name == "nt" else "clear")
     print("=== Edit Max Threads Per Host ===\n")
-    current_value = settings.get('max_threads_per_host', '')
+    current_value = ssh_config.get('max_threads_per_host', '')
     print(f"Current value: {current_value if current_value else '(not set)'}")
     print("\nEnter the maximum number of threads per host.")
     print("Leave blank to clear the setting.")
@@ -265,8 +274,8 @@ def edit_max_threads_per_host(settings):
     new_value = input("\nNew value: ").strip()
     
     if not new_value:
-        if 'max_threads_per_host' in settings:
-            del settings['max_threads_per_host']
+        if 'max_threads_per_host' in ssh_config:
+            del ssh_config['max_threads_per_host']
         print("max_threads_per_host setting cleared.")
     else:
         try:
@@ -274,13 +283,17 @@ def edit_max_threads_per_host(settings):
             if val <= 0:
                 print("Invalid value. max_threads_per_host must be greater than 0.")
             else:
-                settings['max_threads_per_host'] = val
-                print(f"max_threads_per_host updated to: {settings['max_threads_per_host']}")
+                ssh_config['max_threads_per_host'] = val
+                print(f"max_threads_per_host updated to: {ssh_config['max_threads_per_host']}")
         except ValueError:
             print("Invalid value. Please enter a number.")
     
+    # Save ssh-config
+    with open(config_path, "w") as f:
+        yaml.dump(ssh_config, f)
+    
     input("\nPress Enter to continue...")
-    return settings
+    return ssh_config
 
 
 def non_interactive_fix_keys(
