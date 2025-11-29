@@ -50,7 +50,7 @@ A minimal `settings.yaml` file looks like this:
 ssh_private_key_path: /absolute/path/to/your/key
 ```
 
-You can always **manually create or edit** this file, or provide a full configuration in the optional **`ssh-config.yaml`** file to bypass the initial wizard prompts.
+You can always **manually create or edit** this file, or provide a full configuration in the optional **`settings.yaml`** file to bypass the initial wizard prompts.
 
 ### 🔒 Thread Limiting (Optional)
 
