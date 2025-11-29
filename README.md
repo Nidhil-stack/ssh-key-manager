@@ -14,7 +14,7 @@ This document provides installation instructions and operational guidelines for 
 <!-- end list -->
 
 ```bash
-pip install path/to/download/goodass-0.1.1.whl
+pip install path/to/download/goodass-0.2.0.whl
 ```
 
 ### 🚀 First Run and Setup Wizard
