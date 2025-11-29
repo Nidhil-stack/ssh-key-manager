@@ -185,11 +185,11 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    if verbosity != "DEBUG":
-        global stderr_file
-        err_log_path = os.path.join(config_dir, "goodass_error_log.txt")
-        stderr_file = open(err_log_path, "w")
-        sys.stderr = stderr_file
+    # if verbosity != "DEBUG":
+    #    global stderr_file
+    #    err_log_path = os.path.join(config_dir, "goodass_error_log.txt")
+    #    stderr_file = open(err_log_path, "w")
+    #    sys.stderr = stderr_file
 
     if non_interactive:
         non_interactive_fix_keys(
