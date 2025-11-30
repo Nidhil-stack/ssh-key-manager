@@ -1,3 +1,10 @@
+# GOODASS SSH Configuration File Example
+# This file demonstrates all available configuration options
+
+# ============================================================================
+# HOSTS CONFIGURATION
+# ============================================================================
+# Define the servers you want to manage SSH keys on
 hosts:
   - description: Beta Server
     host: 10.0.0.22
@@ -9,20 +16,64 @@ hosts:
     users:
       - root
       - test
+
+# ============================================================================
+# USERS AND SSH KEYS CONFIGURATION
+# ============================================================================
+# Define users and their associated SSH public keys
 users:
-  - email: jdoe@fakemail.com
+  - email: jdoe@fakemail.com  # MANDATORY, must be unique
+    name: Jon Doe
     keys:
-      - admin: true #ADMIN keys have access to all servers, it is recommended to create an admin access for GOODASS
-        hostname: jdoe@arch #MANDATORY, must be unique
+      - admin: true  # ADMIN keys have access to all servers
+        hostname: jdoe@arch  # MANDATORY, must be unique
         key: AAAAC3NzaC1lZDI1NTE5AAAAICyDd78934htjklev098e4avjaklghDSFADFARAEAFDS
         type: ssh-ed25519
-    name: Jon Doe
-  - email: dupont@fakemail.com #MANDATORY, must be unique
+  - email: dupont@fakemail.com
+    name: Jean Dupont
     keys:
-      - access:
+      - access:  # Non-admin keys require explicit access list
           - host: 10.0.0.22
             username: git
-        hostname: ""
+        hostname: dupont@laptop
         key: AAAAC3NzaC1adsjkf43our9800943rhvrleksjfdacomòjapowuc4ijmrc0cmCARAEW34
         type: ssh-ed25519
-    name: Jean Dupont
+
+# ============================================================================
+# THREAD LIMITING (Optional)
+# ============================================================================
+# Limit concurrent SSH connections per host to prevent overwhelming servers
+max_threads_per_host: 5  # Set to 0 or omit for no limit
+
+# ============================================================================
+# REMOTE SYNC CONFIGURATION (Optional)
+# ============================================================================
+# Configure remote servers for SFTP synchronization
+# All config files will be synced to all servers on startup if autosync is enabled
+sync_servers:
+  - host: backup.example.com
+    username: admin
+    port: 22
+    remote_path: ~/.config/goodass/ssh-config.yaml
+  - host: 192.168.1.100
+    username: syncuser
+    port: 22
+    remote_path: ~/.config/goodass/ssh-config.yaml
+
+# Enable automatic sync of ALL config files on startup
+autosync_on_startup: false
+
+# ============================================================================
+# GPG ENCRYPTION CONFIGURATION (Optional)
+# ============================================================================
+# Configure GPG public keys for encrypting config files
+# Any of these keys can decrypt the file; all are used to verify signatures
+gpg_public_keys:
+  - key_id: ABC12345
+    fingerprint: 1234567890ABCDEF1234567890ABCDEF12345678
+    email: admin@example.com
+    name: Admin User
+  - key_id: DEF67890
+    fingerprint: FEDCBA0987654321FEDCBA0987654321FEDCBA09
+    email: backup@example.com
+    name: Backup Key

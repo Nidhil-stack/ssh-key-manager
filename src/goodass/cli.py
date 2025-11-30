@@ -38,6 +38,54 @@ import signal
 import tempfile
 
 
+LICENSE_TEXT = "Licensed under AGPL-3.0 | https://github.com/Nidhil-stack/GOODASS"
+
+
+def advanced_options_cli(config_dir, config_path, ssh_private_key_path, settings):
+    """CLI for advanced options submenu (Sync, GPG, Multi-File).
+    
+    Parameters:
+    - config_dir (str): Path to the configuration directory.
+    - config_path (str): Path to the ssh-config.yaml file.
+    - ssh_private_key_path (str): Path to the SSH private key.
+    - settings (dict): Settings dictionary.
+    
+    Returns:
+    - dict: Updated settings dictionary.
+    """
+    advanced_menu = """
+Advanced Options:
+
+    1. Remote Sync (SFTP)
+    2. GPG Encryption & Signing
+    3. Manage Config Files
+
+    4. Back to Main Menu
+    """
+    
+    while True:
+        os.system("cls" if os.name == "nt" else "clear")
+        print(advanced_menu)
+        print(f"\n{LICENSE_TEXT}")
+        option = input("\nEnter option number: ")
+        os.system("cls" if os.name == "nt" else "clear")
+        
+        if option == "1":
+            syncManager.sync_cli(config_dir, config_path, ssh_private_key_path)
+        elif option == "2":
+            gpgManager.gpg_cli(config_dir, config_path, settings)
+        elif option == "3":
+            multiFileManager.multifile_cli(config_dir)
+            settings = multiFileManager.load_settings(config_dir)
+        elif option == "4" or option.lower() in ["back", "done", "q"]:
+            return settings
+        else:
+            print("Invalid option selected.")
+            input("Press Enter to continue...")
+    
+    return settings
+
+
 def main():
     global directory, stderr_file
     stderr_file = None
@@ -141,9 +189,12 @@ def main():
 
     # Check for multi-file setup and prompt for selection if needed
     settings = multiFileManager.file_selection_prompt(settings, config_dir)
+    
+    # Get all config files for syncing
+    config_files = settings.get("config_files", [])
 
-    # Perform autosync if enabled
-    syncManager.perform_autosync(config_path, ssh_private_key_path)
+    # Perform autosync if enabled (syncs ALL config files)
+    syncManager.perform_autosync(config_path, ssh_private_key_path, config_files)
 
     if non_interactive:
         keyManager.non_interactive_fix_keys(
@@ -155,24 +206,24 @@ def main():
         utils.exit_gracefully()
 
     menu = """
-Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:\n
+Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:
+
     1. Fetch and display all SSH keys
     2. Fix SSH key issues
     3. Manage Users
     4. Manage Hosts
-    5. Manage Remote Sync
-    6. Manage GPG Keys
-    7. Manage Config Files
-    8. Edit Settings
+    5. Advanced Options (Sync, GPG, Multi-File)
+    6. Edit Settings
     
-    9. Exit
+    7. Exit
     """
 
     #### Main CLI Loop ####
     while True:
         os.system("cls" if os.name == "nt" else "clear")
         print(menu)
-        option = input("Enter option number: ")
+        print(f"\n{LICENSE_TEXT}")
+        option = input("\nEnter option number: ")
         os.system("cls" if os.name == "nt" else "clear")
         if option == "1":
             keyManager.print_keys_table_cli(
@@ -193,18 +244,12 @@ Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:\n
         elif option == "4":
             hostManager.host_cli(config_path)
         elif option == "5":
-            syncManager.sync_cli(config_dir, config_path, ssh_private_key_path)
+            settings = advanced_options_cli(config_dir, config_path, ssh_private_key_path, settings)
         elif option == "6":
-            gpgManager.gpg_cli(config_dir, config_path, settings)
-        elif option == "7":
-            multiFileManager.multifile_cli(config_dir)
-            # Reload settings after multi-file management
-            settings = multiFileManager.load_settings(config_dir)
-        elif option == "8":
             ssh_private_key_path = settingsManager.settings_cli(config_dir, config_path)
             # Reload settings to get updated gpg_home using consistent function
             settings = multiFileManager.load_settings(config_dir)
-        elif option == "9" or option.lower() == "exit" or option.lower() == "q":
+        elif option == "7" or option.lower() == "exit" or option.lower() == "q":
             utils.exit_gracefully()
         else:
             print("Invalid option selected.")

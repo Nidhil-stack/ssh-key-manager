@@ -504,14 +504,15 @@ def download_config_cli(config, config_path, ssh_private_key_path):
     return config
 
 
-def perform_autosync(config_path, ssh_private_key_path):
-    """Perform autosync if enabled.
+def perform_autosync(config_path, ssh_private_key_path, config_files=None):
+    """Perform autosync if enabled for all config files.
     
-    Called on startup to sync configuration with remote servers.
+    Called on startup to sync ALL configuration files with remote servers.
     
     Parameters:
-    - config_path (str): Path to the ssh-config.yaml file.
+    - config_path (str): Path to the main ssh-config.yaml file.
     - ssh_private_key_path (str): Path to the SSH private key.
+    - config_files (list): List of additional config file paths to sync.
     
     Returns:
     - bool: True if autosync was performed, False otherwise.
@@ -525,10 +526,21 @@ def perform_autosync(config_path, ssh_private_key_path):
     if not servers:
         return False
     
-    print("Performing autosync...")
-    # Download from first server, then upload to all
-    if download_config_from_server(config_path, servers[0], ssh_private_key_path):
-        if len(servers) > 1:
-            sync_all_servers(config_path, ssh_private_key_path, "upload")
+    print("Performing autosync for all config files...")
+    
+    # Collect all config file paths to sync
+    all_config_paths = [config_path]
+    if config_files:
+        for cf in config_files:
+            path = cf.get("path", "")
+            if path and path != config_path and os.path.exists(path):
+                all_config_paths.append(path)
+    
+    # Sync each config file with all servers
+    for cfg_path in all_config_paths:
+        print(f"  Syncing {os.path.basename(cfg_path)}...")
+        # Upload to ALL servers (bidirectional sync)
+        for server in servers:
+            upload_config_to_server(cfg_path, server, ssh_private_key_path)
     
     return True

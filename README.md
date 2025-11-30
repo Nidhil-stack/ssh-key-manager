@@ -17,21 +17,10 @@ This document provides installation instructions and operational guidelines for 
   - [Fix SSH Key Issues](#2-fix-ssh-key-issues)
   - [Manage Users](#3-manage-users)
   - [Manage Hosts](#4-manage-hosts)
-- [Remote Sync (SFTP)](#-remote-sync-sftp)
-  - [Adding a Sync Server](#adding-a-sync-server)
-  - [Uploading Config to Servers](#uploading-config-to-servers)
-  - [Downloading Config from Server](#downloading-config-from-server)
-  - [Autosync on Startup](#autosync-on-startup)
-- [GPG Encryption & Signing](#-gpg-encryption--signing)
-  - [Managing GPG Public Keys](#managing-gpg-public-keys)
-  - [Sign & Encrypt Config File](#sign--encrypt-config-file)
-  - [Decrypt & Verify Config File](#decrypt--verify-config-file)
-  - [Sign Config Only](#sign-config-only)
-  - [Verify Config Signature](#verify-config-signature)
-- [Multi-File Management](#-multi-file-management)
-  - [Adding Config Files](#adding-config-files)
-  - [Selecting Files to Use](#selecting-files-to-use)
-  - [Working with Multiple Files](#working-with-multiple-files)
+- [Advanced Options](#-advanced-options)
+  - [Remote Sync (SFTP)](#-remote-sync-sftp)
+  - [GPG Encryption & Signing](#-gpg-encryption--signing)
+  - [Multi-File Management](#-multi-file-management)
 - [Settings](#️-settings)
 - [Non-Interactive Mode](#-non-interactive-mode)
 - [Security Best Practices](#️-security-best-practices)
@@ -119,7 +108,7 @@ max_threads_per_host: 5  # Limit to 5 concurrent connections per host
 
 ## 📋 Main Menu Overview
 
-When you run `goodass`, you'll see the main menu with 9 options:
+When you run `goodass`, you'll see the main menu with 7 options:
 
 ```
 Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:
@@ -128,12 +117,23 @@ Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:
     2. Fix SSH key issues
     3. Manage Users
     4. Manage Hosts
-    5. Manage Remote Sync
-    6. Manage GPG Keys
-    7. Manage Config Files
-    8. Edit Settings
+    5. Advanced Options (Sync, GPG, Multi-File)
+    6. Edit Settings
     
-    9. Exit
+    7. Exit
+
+Licensed under AGPL-3.0 | https://github.com/Nidhil-stack/GOODASS
+```
+
+The **Advanced Options** submenu contains:
+```
+Advanced Options:
+
+    1. Remote Sync (SFTP)
+    2. GPG Encryption & Signing
+    3. Manage Config Files
+
+    4. Back to Main Menu
 ```
 
 ---
@@ -196,9 +196,20 @@ Add and remove hosts from your configuration.
 
 ---
 
+## 🚀 Advanced Options
+
+The **Advanced Options** submenu (option 5 from the main menu) provides access to:
+- Remote Sync (SFTP) - Sync configs across servers
+- GPG Encryption & Signing - Protect your config files
+- Manage Config Files - Work with multiple configurations
+
+---
+
 ## 🔄 Remote Sync (SFTP)
 
 Synchronize your `ssh-config.yaml` with remote servers via SFTP. This enables configuration sharing and backup across multiple machines.
+
+**Access via:** Main Menu → Advanced Options → Remote Sync (SFTP)
 
 **Remote Sync Menu:**
 ```
@@ -212,9 +223,10 @@ Synchronize your `ssh-config.yaml` with remote servers via SFTP. This enables co
 
 ### Adding a Sync Server
 
-1. Select option `5` (Manage Remote Sync) from the main menu
-2. Select option `1` (Add Sync Server)
-3. Enter the required information:
+1. Select **Advanced Options** from the main menu
+2. Select **Remote Sync (SFTP)**
+3. Select option `1` (Add Sync Server)
+4. Enter the required information:
    - **Hostname or IP**: The server address (e.g., `192.168.1.100` or `myserver.com`)
    - **SSH Username**: The user to connect as (e.g., `admin`)
    - **SSH Port**: Default is `22`
@@ -248,16 +260,19 @@ Enable automatic synchronization when the program starts:
 
 1. Select option `5` (Toggle Autosync on Startup)
 2. When enabled, the program will:
-   - Download config from the first sync server on startup
-   - Upload to all servers after downloading (if multiple servers configured)
+   - **Sync ALL config files** (main config and any additional config files you've added)
+   - Upload all config files to **ALL configured sync servers**
+   - Keep configurations in sync across all your machines
 
-> **Tip:** Autosync is useful for teams sharing a common configuration.
+> **Tip:** Autosync is useful for teams sharing a common configuration. All selected config files are synced to all servers.
 
 ---
 
 ## 🔐 GPG Encryption & Signing
 
 Protect your configuration files with GPG encryption and cryptographic signatures to prevent unauthorized modifications.
+
+**Access via:** Main Menu → Advanced Options → GPG Encryption & Signing
 
 **GPG Key Management Menu:**
 ```
@@ -338,6 +353,8 @@ Verify a detached signature:
 
 Work with multiple `ssh-config.yaml` files simultaneously, useful for managing different environments or projects.
 
+**Access via:** Main Menu → Advanced Options → Manage Config Files
+
 **Config File Management Menu:**
 ```
     1. Add Config File
@@ -350,11 +367,12 @@ Work with multiple `ssh-config.yaml` files simultaneously, useful for managing d
 
 ### Adding Config Files
 
-1. Select option `7` (Manage Config Files) from the main menu
-2. Select option `1` (Add Config File)
-3. Enter a display name (e.g., "Production", "Staging")
-4. Enter the file path (use **Tab** for autocomplete)
-5. If the file doesn't exist, you'll be asked to create it
+1. Select **Advanced Options** from the main menu
+2. Select **Manage Config Files**
+3. Select option `1` (Add Config File)
+4. Enter a display name (e.g., "Production", "Staging")
+5. Enter the file path (use **Tab** for autocomplete)
+6. If the file doesn't exist, you'll be asked to create it
 
 **Example:**
 ```
@@ -399,16 +417,18 @@ When multiple files are selected:
 - **Hosts and users are merged** from all selected files
 - **Changes are saved** to the first selected file
 - The selection is **remembered** across sessions
+- **All selected files are synced** when autosync is enabled
 
 **Startup behavior:**
 - If you have multiple config files and no prior selection, you'll be prompted to choose
 - Your last selection is automatically used on subsequent runs
+- When autosync is enabled, ALL selected config files are uploaded to ALL sync servers
 
 ---
 
 ## ⚙️ Settings
 
-Configure program settings through the Settings menu (option `8`):
+Configure program settings through the Settings menu (option `6`):
 
 ```
 === Settings Configuration ===

@@ -9,7 +9,7 @@
   - Add/remove remote sync servers with custom paths
   - Upload config to all configured servers
   - Download config from any configured server
-  - **Autosync on startup**: Automatically sync configuration when the program starts
+  - **Autosync on startup**: Automatically sync ALL configuration files with ALL servers when the program starts
   - Remote path defaults to the standard config location (`~/.config/goodass/ssh-config.yaml`)
   - Sync server configuration is stored in the ssh-config.yaml file itself
 
@@ -21,6 +21,7 @@
   - Remember last selection and use it automatically on startup
   - Prompt for file selection only when multiple files exist and no prior selection is found
   - Quick "all" option to select all files at once
+  - **All selected files are synced** when autosync is enabled
 
 #### GPG Encryption & Signing Support
 - **New `gpgManager.py` module**: Protect config files with GPG encryption and signing
@@ -46,17 +47,24 @@
 
 ### 🎨 UI Changes
 
-#### Updated Main Menu (8 options + exit)
+#### Consolidated Main Menu (6 options + exit)
 1. Fetch and display all SSH keys
 2. Fix SSH key issues
 3. Manage Users
 4. Manage Hosts
-5. Manage Remote Sync (new)
-6. Manage GPG Keys (new)
-7. Manage Config Files (new)
-8. Edit Settings
+5. **Advanced Options** (consolidated submenu for Sync, GPG, Multi-File)
+6. Edit Settings
 
-9. Exit
+7. Exit
+
+#### Advanced Options Submenu
+1. Remote Sync (SFTP)
+2. GPG Encryption & Signing
+3. Manage Config Files
+4. Back to Main Menu
+
+#### License Display
+- License information is now displayed at the bottom of the main menu and submenus
 
 ### 📦 Dependencies
 - Added `python-gnupg==0.5.4` for GPG encryption support
@@ -65,6 +73,7 @@
 - All new features are implemented as separate modules for clean code organization
 - Consistent UI patterns matching existing menus (add/remove with tab completion)
 - Sync server and GPG key configurations are stored in ssh-config.yaml for portability
+- Updated `ssh-config.yaml.example` with all new configuration options
 
 ---
 
