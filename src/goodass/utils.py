@@ -10,20 +10,47 @@ from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
 
+if __package__ is None or __package__ == "":
+    import logger as app_logger
+else:
+    from . import logger as app_logger
+
 # Global references for cleanup - these are set by cli.py
 directory = None
 stderr_file = None
 
 
 def signal_handler(sig, frame):
-    """Handle Ctrl+C signal for graceful exit."""
-    print("\nYou pressed Ctrl+C! Exiting gracefully...")
+    """Handle Ctrl+C signal for graceful exit.
+    
+    In debug mode (verbosity 3), also creates a core dump.
+    """
+    try:
+        log = app_logger.get_logger()
+        log.print_minimal("\nYou pressed Ctrl+C! Exiting gracefully...")
+        log.log_program("signal", "Received SIGINT (Ctrl+C)")
+        
+        # Create core dump in debug mode
+        if log.verbosity == app_logger.LogLevel.DEBUG:
+            log.print_debug("Creating core dump (debug mode)...")
+            log.create_core_dump(trigger="SIGINT (Ctrl+C) in debug mode")
+    except Exception:
+        print("\nYou pressed Ctrl+C! Exiting gracefully...")
+    
     exit_gracefully()
 
 
 def exit_gracefully():
     """Cleans up temporary files and exits the program."""
     global stderr_file, directory
+    
+    try:
+        log = app_logger.get_logger()
+        log.log_program("exit", "Program exiting gracefully")
+        log.record_program_state("Program exit")
+    except Exception:
+        pass
+    
     if stderr_file is not None:
         try:
             stderr_file.close()
@@ -36,11 +63,19 @@ def exit_gracefully():
                 if os.path.isfile(file_path) or os.path.islink(file_path):
                     os.unlink(file_path)
             except Exception as e:
-                print(f"Failed to delete {file_path}. Reason: {e}")
+                try:
+                    log = app_logger.get_logger()
+                    log.log_error("cleanup", f"Failed to delete {file_path}", e)
+                except Exception:
+                    print(f"Failed to delete {file_path}. Reason: {e}")
         try:
             os.rmdir(directory)
         except OSError as e:
-            print(f"Failed to remove directory {directory}. Reason: {e}")
+            try:
+                log = app_logger.get_logger()
+                log.log_error("cleanup", f"Failed to remove directory {directory}", e)
+            except Exception:
+                print(f"Failed to remove directory {directory}. Reason: {e}")
     sys.exit()
 
 

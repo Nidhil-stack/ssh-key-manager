@@ -12,13 +12,12 @@ ssh_private_key_path: ~/.ssh/id_rsa
 # ============================================================================
 # VERBOSITY LEVEL
 # ============================================================================
-# Controls the amount of output displayed
-# 0 = Normal (default)
-# 1 = Verbose
-# 2 = Very verbose
-# 3 = Debug
-# 4 = Debug with stderr output (errors shown in terminal instead of log file)
-verbosity: 0
+# Controls the amount of output displayed and logging behavior
+# 0 = Minimal (essential output only, no tables)
+# 1 = Default (normal output, similar to standard behavior)
+# 2 = Verbose (detailed output with additional information)
+# 3 = Debug (full debug output, shows all process details, core dump on Ctrl+C)
+verbosity: 1
 
 # ============================================================================
 # THREAD LIMITING

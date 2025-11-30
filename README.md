@@ -101,8 +101,34 @@ max_threads_per_host: 5  # Limit to 5 concurrent connections per host
   * Set to a positive integer to limit concurrent threads per host
   * Set to `0` or omit the setting entirely for **no limit** (default behavior)
 
-> **❗ Error Handling Note**
-> All program errors, warnings, and log messages are **redirected and saved** in files within the configuration directory (e.g., `~/.config/goodass/`). Set **verbosity to 4** for debug mode to display errors in the terminal.
+### 📊 Logging System
+
+GOODASS includes a comprehensive logging system with 4 verbosity levels for console output and 4 separate log files for security and debugging.
+
+**Verbosity Levels:**
+
+| Level | Name | Description |
+| :---: | :--- | :--- |
+| 0 | Minimal | Essential output only, no tables |
+| 1 | Default | Normal output (default behavior) |
+| 2 | Verbose | Detailed output with additional information |
+| 3 | Debug | Full debug output, creates core dump on Ctrl+C |
+
+**Log Files (located in `~/.config/goodass/logs/`):**
+
+| File | Purpose |
+| :--- | :--- |
+| `server.log` | All server-related activities (connections, uploads, fetches) |
+| `program.log` | All program activities with integrity verification |
+| `error.log` | Errors and crash information |
+| `coredump.log` | System state dump (triggered by crash or Ctrl+C in debug mode) |
+
+**Security Features:**
+- **Hash Chain Integrity:** Program logs are protected by a cryptographic hash chain
+- **Config Signing Records:** Every time a config file is signed, the hash is appended to a secure chain
+- **GPG Signatures:** Hash chain files can be signed with GPG for tamper detection
+
+> **❗ Note:** In debug mode (verbosity 3), pressing Ctrl+C will create a core dump before exiting, useful for debugging.
 
 ---
 
@@ -592,7 +618,7 @@ python src/goodass/cli.py
 
 > Completion of the remaining items will trigger the **Version 1.0.0** release.
 
-  * Implement a **comprehensive logging system** for operational details, warnings, and success messages.
+  * ~~Implement a **comprehensive logging system** for operational details, warnings, and success messages.~~ ✅ **Implemented** - See "Logging System" section.
   * ~~**Limit multi-threaded jobs against one host**~~ ✅ **Implemented** - Use `max_threads_per_host` setting.
   * ~~**Synchronize ssh-config.yaml with remote servers via SFTP**~~ ✅ **Implemented** - Use "Manage Remote Sync" menu.
   * ~~**GPG encryption for config files**~~ ✅ **Implemented** - Use "Manage GPG Keys" menu.

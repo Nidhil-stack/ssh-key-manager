@@ -5,6 +5,11 @@ import getpass
 import prettytable
 import yaml
 
+if __package__ is None or __package__ == "":
+    import logger as app_logger
+else:
+    from . import logger as app_logger
+
 
 colorRed = "\033[0;31;40m"
 colorGreen = "\033[0;32;40m"
@@ -24,6 +29,8 @@ def print_keys_table_cli(
     the console, prints a table of all discovered keys and waits for
     the user to press Enter before returning.
     """
+    log = app_logger.get_logger()
+    log.log_program("keys_fetch", "Starting to fetch and display SSH keys")
 
     servers, all_user_keys, all_keys, passwords = get_ssh_keys(
         config_path, ssh_private_key_path, pwds, directory
@@ -31,6 +38,7 @@ def print_keys_table_cli(
     pwds.update(passwords)
     os.system("cls" if os.name == "nt" else "clear")
     print_keys_table(all_keys)
+    log.log_program("keys_fetch", f"Displayed {len(all_keys)} SSH keys")
     input("Press Enter to continue...")
 
 
@@ -50,6 +58,8 @@ def fix_keys_cli(
     This function updates the shared `pwds` cache with any passwords
     returned from `get_ssh_keys`.
     """
+    log = app_logger.get_logger()
+    log.log_program("fix_keys", "Starting key fix workflow")
 
     servers, all_user_keys, all_keys, passwords = get_ssh_keys(
         config_path,
@@ -60,24 +70,32 @@ def fix_keys_cli(
     )
     pwds.update(passwords)
     checked_keys = check_keys(all_user_keys)
+    
+    # Count issues
+    matched = sum(1 for k in checked_keys if k["status"] == 0)
+    not_found = sum(1 for k in checked_keys if k["status"] == 1)
+    unauthorized = sum(1 for k in checked_keys if k["status"] == -1)
+    log.log_program("fix_keys", f"Key check: {matched} matched, {not_found} not found, {unauthorized} unauthorized")
+    
     # if all keys are status 0, then no issues
     if interactive:
         os.system("cls" if os.name == "nt" else "clear")
         print_checked_keys_table(checked_keys)
     if all(key["status"] == 0 for key in checked_keys):
         if interactive:
-            print("All servers are up to date, no issues found.")
+            log.print_default("All servers are up to date, no issues found.")
             input("Press Enter to continue...")
+        log.log_program("fix_keys", "All keys matched, no fixes needed")
         return
     if interactive:
-        print(
+        log.print_default(
             "Issues found with the above keys. Please check them then press Enter to continue."
         )
     fixed_keys = list(filter(lambda k: k["status"] >= 0, checked_keys))
     if interactive:
         input("Press Enter to continue...")
         os.system("cls" if os.name == "nt" else "clear")
-        print("Fixed Keys:")
+        log.print_default("Fixed Keys:")
         print_checked_keys_table(list(fixed_keys))
     key_tables = {}
     for server in servers:
@@ -93,12 +111,13 @@ def fix_keys_cli(
             )
             key_tables[f"{user}@{host}"] = key_table
             if interactive:
-                print(f"Keys table for {user}@{host}...")
+                log.print_verbose(f"Keys table for {user}@{host}...")
                 print_checked_keys_table(key_table)
     if interactive:
         confirmation = input("Result after fix, continue? [y/N]")
         if confirmation.lower() == "y":
-            print("Fixing keys...")
+            log.print_default("Fixing keys...")
+            log.log_program("fix_keys", f"User confirmed fix, uploading to {len(key_tables)} targets")
             upload_all_ssh_files(
                 pwds,
                 directory=directory,
@@ -107,8 +126,12 @@ def fix_keys_cli(
                 config_path=config_path,
                 interactive=interactive,
             )
+            log.log_program("fix_keys", "Key fix completed")
             input("All done! Press Enter to continue...")
+        else:
+            log.log_program("fix_keys", "User cancelled key fix")
     else:
+        log.log_program("fix_keys", f"Non-interactive mode: uploading to {len(key_tables)} targets")
         upload_all_ssh_files(
             pwds,
             directory=directory,
@@ -117,6 +140,7 @@ def fix_keys_cli(
             config_path=config_path,
             interactive=interactive,
         )
+        log.log_program("fix_keys", "Non-interactive key fix completed")
 
 
 def upload_all_ssh_files(
@@ -229,11 +253,14 @@ def upload_ssh_file(
 
     Raises exceptions from `paramiko` for non-authentication related failures.
     """
+    log = app_logger.get_logger()
+    log.log_server("upload", f"Starting upload to {username}@{host}")
+    
     with open(
         os.path.join(directory, f"{username}@{host}.authorized_keys"), "r"
     ) as key_file:
         if interactive:
-            print(f"Uploading keys to {username}@{host}")
+            log.print_default(f"Uploading keys to {username}@{host}")
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
@@ -243,17 +270,23 @@ def upload_ssh_file(
                 password=None,
                 key_filename=ssh_private_key_path,
             )
+            log.log_server("upload", f"Connected to {username}@{host} via key auth")
         except Exception as e:
             if "Authentication failed" in str(e) and not interactive:
+                log.log_server("upload", f"Key auth failed for {username}@{host}, trying password", "WARNING")
                 pwd = pwds.get(f"{username}@{host}")
                 if pwd:
                     try:
                         client.connect(host, username=username, password=pwd)
+                        log.log_server("upload", f"Connected to {username}@{host} via password")
                     except Exception as pwd_e:
+                        log.log_server("upload", f"Password auth failed for {username}@{host}", "ERROR")
+                        log.log_error("upload", f"Authentication failed for {username}@{host}", pwd_e)
                         raise Exception(
                             f"Authentication failed for {username}@{host} in non-interactive mode"
                         ) from pwd_e
                 else:
+                    log.log_server("upload", f"No password available for {username}@{host}", "ERROR")
                     raise Exception(
                         f"No password available for {username}@{host} in non-interactive mode"
                     ) from e
@@ -273,19 +306,22 @@ def upload_ssh_file(
                                 )
                             passwords[f"{username}@{host}"] = password
                             client.connect(host, username=username, password=password)
+                            log.log_server("upload", f"Connected to {username}@{host} via password (attempt {attempts + 1})")
                             break
                         except Exception as e:
                             if "Authentication failed" in str(e):
                                 attempts += 1
-                                print("Authentication failed, please try again.")
+                                log.print_default("Authentication failed, please try again.")
                             else:
-                                print("Upload failed for", f"{username}@{host}")
+                                log.print_default(f"Upload failed for {username}@{host}")
+                                log.log_server("upload", f"Upload failed for {username}@{host}: {e}", "ERROR")
                                 raise e
                 finally:
                     if console_lock and console_lock.locked():
                         console_lock.release()
             else:
-                print("Upload failed for", f"{username}@{host}")
+                log.print_default(f"Upload failed for {username}@{host}")
+                log.log_server("upload", f"Connection failed for {username}@{host}: {e}", "ERROR")
                 raise e
         if console_lock and console_lock.locked():
             console_lock.release()
@@ -302,14 +338,16 @@ def upload_ssh_file(
                     os.path.join(directory, f"{username}@{host}.authorized_keys"),
                     f"/home/{username}/.ssh/authorized_keys",
                 )
+            log.log_server("upload", f"Successfully uploaded keys to {username}@{host}")
         except Exception as e:
             if console_lock:
                 console_lock.acquire()
             if "No such file" in str(e):
                 if interactive:
-                    print(
+                    log.print_default(
                         f"Remote .ssh directory does not exist for {username}@{host}. Upload failed."
                     )
+                log.log_server("upload", f"Remote .ssh directory missing for {username}@{host}", "WARNING")
                 if console_lock:
                     console_lock.release()
             else:
@@ -509,6 +547,9 @@ def fetch_authorized_keys(
     parses it with `parse_authorized_keys`, removes the temporary file and updates
     the module-level `all_keys` list with discovered keys.
     """
+    log = app_logger.get_logger()
+    log.log_server("fetch", f"Fetching keys from {username}@{host}")
+    
     keys = []
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -516,17 +557,23 @@ def fetch_authorized_keys(
         client.connect(
             host, username=username, password=None, key_filename=ssh_private_key_path
         )
+        log.log_server("fetch", f"Connected to {username}@{host} via key auth")
     except Exception as e:
         if "Authentication failed" in str(e) and not interactive:
+            log.log_server("fetch", f"Key auth failed for {username}@{host}, trying password", "WARNING")
             pwd = pwds.get(f"{username}@{host}")
             if pwd:
                 try:
                     client.connect(host, username=username, password=pwd)
+                    log.log_server("fetch", f"Connected to {username}@{host} via password")
                 except Exception as pwd_e:
+                    log.log_server("fetch", f"Password auth failed for {username}@{host}", "ERROR")
+                    log.log_error("fetch", f"Authentication failed for {username}@{host}", pwd_e)
                     raise Exception(
                         f"Authentication failed for {username}@{host} in non-interactive mode"
                     ) from pwd_e
             else:
+                log.log_server("fetch", f"No password available for {username}@{host}", "ERROR")
                 raise Exception(
                     f"No password available for {username}@{host} in non-interactive mode"
                 ) from e
@@ -534,7 +581,7 @@ def fetch_authorized_keys(
             if console_lock:
                 console_lock.acquire()
             try:
-                print("Using password authentication for", f"{username}@{host}")
+                log.print_default(f"Using password authentication for {username}@{host}")
                 attempts = 0
                 while attempts < 3:
                     try:
@@ -547,19 +594,22 @@ def fetch_authorized_keys(
                             )
                         passwords[f"{username}@{host}"] = password
                         client.connect(host, username=username, password=password)
+                        log.log_server("fetch", f"Connected to {username}@{host} via password (attempt {attempts + 1})")
                         break
-                    except Exception as e:
-                        if "Authentication failed" in str(e):
+                    except Exception as inner_e:
+                        if "Authentication failed" in str(inner_e):
                             attempts += 1
-                            print("Authentication failed, please try again.")
+                            log.print_default("Authentication failed, please try again.")
                         else:
-                            print(e)
+                            log.print_default(str(inner_e))
+                            log.log_server("fetch", f"Connection error for {username}@{host}: {inner_e}", "ERROR")
                             break
             finally:
                 if console_lock:
                     console_lock.release()
         else:
-            print(f"Fetch failed for {username}@{host}")
+            log.print_default(f"Fetch failed for {username}@{host}")
+            log.log_server("fetch", f"Fetch failed for {username}@{host}: {e}", "ERROR")
             raise e
     sftp = client.open_sftp()
     try:
@@ -577,19 +627,22 @@ def fetch_authorized_keys(
         keys = parse_authorized_keys(
             os.path.join(directory, f"authorized_keys_{host}_{username}")
         )
+        log.log_server("fetch", f"Fetched {len(keys)} keys from {username}@{host}")
     except Exception as e:
         if "No such file" in str(e):
             if console_lock:
                 console_lock.acquire()
             if interactive:
-                print(f"No authorized_keys file for {username}@{host}, skipping.")
+                log.print_verbose(f"No authorized_keys file for {username}@{host}, skipping.")
+            log.log_server("fetch", f"No authorized_keys file for {username}@{host}", "WARNING")
             open(
                 os.path.join(directory, f"authorized_keys_{host}_{username}"), "w"
             ).close()
             if console_lock:
                 console_lock.release()
         else:
-            print(f"Fetch failed for {username}@{host}")
+            log.print_default(f"Fetch failed for {username}@{host}")
+            log.log_server("fetch", f"Fetch failed for {username}@{host}: {e}", "ERROR")
             raise e
     finally:
         if sftp:

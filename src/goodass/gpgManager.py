@@ -32,6 +32,22 @@ def get_gpg(gpg_home=None):
     return gnupg.GPG()
 
 
+def _record_config_signing(config_path):
+    """Record config signing event in the logger's hash chain.
+    
+    Parameters:
+    - config_path (str): Path to the signed config file.
+    """
+    try:
+        if __package__ is None or __package__ == "":
+            import logger as app_logger
+        else:
+            from . import logger as app_logger
+        app_logger.record_config_signing(config_path)
+    except Exception:
+        pass  # Don't fail signing if logging fails
+
+
 def load_ssh_config(config_path):
     """Load the ssh-config.yaml file.
 
@@ -228,6 +244,8 @@ def sign_config(config_path, key_fingerprint=None, passphrase=None, gpg_home=Non
         with open(sig_path, "wb") as f:
             f.write(signed.data)
         print(f"Config signed. Signature saved to {sig_path}")
+        # Record signing event in the secure hash chain
+        _record_config_signing(config_path)
         return True
     else:
         print(f"Signing failed: {signed.status}")
@@ -332,6 +350,8 @@ def sign_and_encrypt_config(
         with open(encrypted_path, "w") as f:
             f.write(str(encrypted))
         print(f"Config signed and encrypted to {encrypted_path}")
+        # Record signing event in the secure hash chain
+        _record_config_signing(config_path)
         return True
     else:
         print(f"Sign and encrypt failed: {encrypted.status}")

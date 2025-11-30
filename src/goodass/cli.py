@@ -23,6 +23,7 @@ if __package__ is None:
     import syncManager
     import gpgManager
     import multiFileManager
+    import logger as app_logger
 else:
     from . import keyManager
     from . import userManager
@@ -32,6 +33,7 @@ else:
     from . import syncManager
     from . import gpgManager
     from . import multiFileManager
+    from . import logger as app_logger
 from pathlib import Path
 import yaml
 import signal
@@ -166,7 +168,13 @@ def main():
     with open(os.path.join(config_dir, "settings.yaml"), "r") as f:
         settings = yaml.safe_load(f)
         ssh_private_key_path = settings.get("ssh_private_key_path", "")
-        verbosity = settings.get("verbosity", 0)
+        verbosity = settings.get("verbosity", 1)
+
+    # Initialize the logging system
+    log = app_logger.init_logger(config_dir, verbosity)
+    log.set_gpg_home(settings.get("gpg_home"))
+    log.log_program("startup", f"GOODASS starting with verbosity level {verbosity}")
+    log.print_debug(f"Configuration directory: {config_dir}")
 
     if os.path.exists(os.path.join(config_dir, "passwords.yaml")):
         with open(os.path.join(config_dir, "passwords.yaml"), "r") as f:
@@ -178,12 +186,13 @@ def main():
                     password = c.get("password")
                     if host and password:
                         pwds[f"{user}@{host}"] = password
-        print(pwds)
+        log.print_debug(f"Loaded {len(pwds)} password entries from passwords.yaml")
 
     signal.signal(signal.SIGINT, utils.signal_handler)
 
-    input("verbosity: " + str(verbosity) + " (press Enter to continue)")
-    if verbosity != 4:
+    # In debug mode (verbosity 3), stderr is NOT redirected so errors are shown
+    # directly in the terminal for easier debugging. Otherwise, errors go to log file.
+    if verbosity < 3:
         err_log_path = os.path.join(config_dir, "goodass_error_log.txt")
         stderr_file = open(err_log_path, "w")
         sys.stderr = stderr_file
@@ -197,6 +206,7 @@ def main():
     )
 
     if non_interactive:
+        log.log_program("mode", "Running in non-interactive mode (--fix-keys)")
         keyManager.non_interactive_fix_keys(
             pwds,
             config_path,
@@ -221,10 +231,13 @@ Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:
     #### Main CLI Loop ####
     while True:
         os.system("cls" if os.name == "nt" else "clear")
-        print(menu)
-        print(f"\n{LICENSE_TEXT}")
+        log.print_minimal(menu)
+        log.print_minimal(f"\n{LICENSE_TEXT}")
+        log.set_user_typing(True)
         option = input("\nEnter option number: ")
+        log.set_user_typing(False)
         os.system("cls" if os.name == "nt" else "clear")
+        log.log_program("menu", f"User selected menu option: {option}")
         if option == "1":
             keyManager.print_keys_table_cli(
                 pwds,
@@ -251,10 +264,14 @@ Welcome to the SSH Key Manager (v0.3.0-pre), please select an option:
             ssh_private_key_path = settingsManager.settings_cli(config_dir, config_path)
             # Reload settings to get updated gpg_home using consistent function
             settings = multiFileManager.load_settings(config_dir)
+            # Update logger settings after verbosity might have changed
+            new_verbosity = settings.get("verbosity", 1)
+            log.set_verbosity(new_verbosity)
+            log.set_gpg_home(settings.get("gpg_home"))
         elif option == "7" or option.lower() == "exit" or option.lower() == "q":
             utils.exit_gracefully()
         else:
-            print("Invalid option selected.")
+            log.print_default("Invalid option selected.")
             input("Press Enter to continue...")
 
 

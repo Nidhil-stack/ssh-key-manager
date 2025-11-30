@@ -177,26 +177,31 @@ def edit_verbosity(settings):
     os.system("cls" if os.name == "nt" else "clear")
     print("=== Edit Verbosity ===\n")
     current_value = settings.get("verbosity", "")
-    print(f"Current value: {current_value if current_value else '(not set)'}")
-    print("\nEnter new verbosity level (e.g., 0, 1, 2).")
-    print("Leave blank to clear the setting.")
+    print(f"Current value: {current_value if current_value != '' else '(not set, default: 1)'}")
+    print("\nVerbosity levels:")
+    print("  0 = Minimal (essential output only, no tables)")
+    print("  1 = Default (normal output, similar to current behavior)")
+    print("  2 = Verbose (detailed output with additional information)")
+    print("  3 = Debug (full debug output, shows all process details)")
+    print("\nLeave blank to use default (1).")
 
-    new_value = input("\nNew value: ").strip()
+    new_value = input("\nNew value (0-3): ").strip()
 
     if not new_value:
         if "verbosity" in settings:
             del settings["verbosity"]
-        print("Verbosity setting cleared.")
+        print("Verbosity setting cleared (will use default: 1).")
     else:
         try:
             val = int(new_value)
-            if val < 0:
-                print("Invalid value. Verbosity must be 0 or greater.")
+            if val < 0 or val > 3:
+                print("Invalid value. Verbosity must be between 0 and 3.")
             else:
                 settings["verbosity"] = val
-                print(f"Verbosity updated to: {settings['verbosity']}")
+                level_names = ["Minimal", "Default", "Verbose", "Debug"]
+                print(f"Verbosity updated to: {val} ({level_names[val]})")
         except ValueError:
-            print("Invalid value. Please enter a number.")
+            print("Invalid value. Please enter a number between 0 and 3.")
 
     input("\nPress Enter to continue...")
     return settings
