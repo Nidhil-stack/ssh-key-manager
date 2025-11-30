@@ -14,14 +14,22 @@
   - Sync server configuration is stored in the ssh-config.yaml file itself
 
 #### Multi-File Support
-- **New `multiFileManager.py` module**: Work with multiple ssh-config.yaml files simultaneously
-  - Add/remove config files with custom names
-  - Select which files to use (single, multiple, or all)
+- **New `multiFileManager.py` module**: Work with multiple ssh-config.yaml files as if they were a single file
+  - Add/remove config files with custom local names
+  - **Toggle files active/inactive**: Enable or disable individual files
+  - **Rename files locally**: Give custom names to files (reverts to standard name when uploaded)
   - Merge multiple configs as if they were a single file
   - Remember last selection and use it automatically on startup
   - Prompt for file selection only when multiple files exist and no prior selection is found
   - Quick "all" option to select all files at once
-  - **All selected files are synced** when autosync is enabled
+  - **All active files are synced** when autosync is enabled
+  - **Sync selection**: Configure which files to sync in non-interactive mode (saved separately)
+
+#### Non-Interactive Mode Sync
+- **Sync selection for `--fix-keys`**: Configure specific files to sync in non-interactive mode
+  - Set via "Set Sync Selection" in Config File Management menu
+  - If not set, uses currently active files
+  - Selection is saved in settings and persisted across sessions
 
 #### GPG Encryption & Signing Support
 - **New `gpgManager.py` module**: Protect config files with GPG encryption and signing
@@ -62,6 +70,16 @@
 2. GPG Encryption & Signing
 3. Manage Config Files
 4. Back to Main Menu
+
+#### Config File Management Menu (8 options)
+1. Add Config File
+2. Remove Config File
+3. Toggle File Active On/Off
+4. Rename Config File (local name)
+5. Set Sync Selection (for non-interactive mode)
+6. Select All Files Active
+7. View Selected Files
+8. Back to Main Menu
 
 #### License Display
 - License information is now displayed at the bottom of the main menu and submenus

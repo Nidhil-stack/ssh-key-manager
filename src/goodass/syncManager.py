@@ -504,7 +504,7 @@ def download_config_cli(config, config_path, ssh_private_key_path):
     return config
 
 
-def perform_autosync(config_path, ssh_private_key_path, config_files=None):
+def perform_autosync(config_path, ssh_private_key_path, settings=None, non_interactive=False):
     """Perform autosync if enabled for all config files.
     
     Called on startup to sync ALL configuration files with remote servers.
@@ -512,7 +512,8 @@ def perform_autosync(config_path, ssh_private_key_path, config_files=None):
     Parameters:
     - config_path (str): Path to the main ssh-config.yaml file.
     - ssh_private_key_path (str): Path to the SSH private key.
-    - config_files (list): List of additional config file paths to sync.
+    - settings (dict): Settings dictionary with config_files and sync_selection.
+    - non_interactive (bool): If True, use sync_selection instead of active files.
     
     Returns:
     - bool: True if autosync was performed, False otherwise.
@@ -530,16 +531,42 @@ def perform_autosync(config_path, ssh_private_key_path, config_files=None):
     
     # Collect all config file paths to sync
     all_config_paths = [config_path]
-    if config_files:
-        for cf in config_files:
-            path = cf.get("path", "")
-            if path and path != config_path and os.path.exists(path):
-                all_config_paths.append(path)
+    
+    if settings:
+        # Determine which files to sync
+        if non_interactive:
+            # Use sync_selection if set, otherwise use active files
+            sync_sel = settings.get("sync_selection", [])
+            if sync_sel:
+                files = settings.get("config_files", [])
+                for f in files:
+                    if f.get("name") in sync_sel:
+                        path = f.get("path", "")
+                        if path and path != config_path and os.path.exists(path):
+                            all_config_paths.append(path)
+            else:
+                # Fall back to selected_files (active files)
+                selected = settings.get("selected_files", [])
+                files = settings.get("config_files", [])
+                for f in files:
+                    if f.get("name") in selected:
+                        path = f.get("path", "")
+                        if path and path != config_path and os.path.exists(path):
+                            all_config_paths.append(path)
+        else:
+            # Interactive mode - use active files
+            selected = settings.get("selected_files", [])
+            files = settings.get("config_files", [])
+            for f in files:
+                if f.get("name") in selected or f.get("active", True):
+                    path = f.get("path", "")
+                    if path and path != config_path and os.path.exists(path):
+                        all_config_paths.append(path)
     
     # Sync each config file with all servers
     for cfg_path in all_config_paths:
         print(f"  Syncing {os.path.basename(cfg_path)}...")
-        # Upload to ALL servers (bidirectional sync)
+        # Upload to ALL servers
         for server in servers:
             upload_config_to_server(cfg_path, server, ssh_private_key_path)
     

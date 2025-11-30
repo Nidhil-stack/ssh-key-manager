@@ -189,12 +189,9 @@ def main():
 
     # Check for multi-file setup and prompt for selection if needed
     settings = multiFileManager.file_selection_prompt(settings, config_dir)
-    
-    # Get all config files for syncing
-    config_files = settings.get("config_files", [])
 
-    # Perform autosync if enabled (syncs ALL config files)
-    syncManager.perform_autosync(config_path, ssh_private_key_path, config_files)
+    # Perform autosync if enabled (syncs ALL config files based on selection)
+    syncManager.perform_autosync(config_path, ssh_private_key_path, settings, non_interactive)
 
     if non_interactive:
         keyManager.non_interactive_fix_keys(

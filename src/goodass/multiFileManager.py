@@ -2,6 +2,7 @@
 
 This module provides functions for managing multiple ssh-config.yaml files,
 allowing users to work on multiple files as if they're a single file.
+Files can be toggled on/off and given custom local names.
 """
 
 import os
@@ -55,7 +56,7 @@ def get_config_files(settings):
 
 
 def get_selected_files(settings):
-    """Get the list of currently selected config files.
+    """Get the list of currently selected (active) config files.
     
     Parameters:
     - settings (dict): Settings dictionary.
@@ -66,13 +67,44 @@ def get_selected_files(settings):
     return settings.get("selected_files", [])
 
 
-def add_config_file(settings, name, path):
+def get_sync_selection(settings):
+    """Get the sync selection for non-interactive mode.
+    
+    This is stored in settings and used by non-interactive mode
+    to determine which files to sync.
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    
+    Returns:
+    - list: List of file names to sync in non-interactive mode.
+            If None or empty, uses selected_files.
+    """
+    return settings.get("sync_selection", [])
+
+
+def set_sync_selection(settings, file_names):
+    """Set the sync selection for non-interactive mode.
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    - file_names (list): List of file names to sync.
+    
+    Returns:
+    - dict: Updated settings dictionary.
+    """
+    settings["sync_selection"] = file_names
+    return settings
+
+
+def add_config_file(settings, name, path, active=True):
     """Add a config file to the list.
     
     Parameters:
     - settings (dict): Settings dictionary.
-    - name (str): Display name for the config file.
+    - name (str): Display name for the config file (local custom name).
     - path (str): Path to the config file.
+    - active (bool): Whether the file is active/selected.
     
     Returns:
     - dict: Updated settings dictionary.
@@ -89,7 +121,16 @@ def add_config_file(settings, name, path):
     settings["config_files"].append({
         "name": name,
         "path": path,
+        "active": active,
     })
+    
+    # Auto-select if active
+    if active:
+        if "selected_files" not in settings:
+            settings["selected_files"] = []
+        if name not in settings["selected_files"]:
+            settings["selected_files"].append(name)
+    
     return settings
 
 
@@ -110,6 +151,80 @@ def remove_config_file(settings, name):
     selected = settings.get("selected_files", [])
     settings["selected_files"] = [s for s in selected if s != name]
     
+    # Also remove from sync selection
+    sync_sel = settings.get("sync_selection", [])
+    settings["sync_selection"] = [s for s in sync_sel if s != name]
+    
+    return settings
+
+
+def toggle_file_active(settings, name, active=None):
+    """Toggle a file's active status on/off.
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    - name (str): Name of the config file to toggle.
+    - active (bool): If provided, set to this value. Otherwise toggle.
+    
+    Returns:
+    - dict: Updated settings dictionary.
+    """
+    files = settings.get("config_files", [])
+    selected = settings.get("selected_files", [])
+    
+    for f in files:
+        if f.get("name") == name:
+            if active is None:
+                # Toggle
+                f["active"] = not f.get("active", True)
+            else:
+                f["active"] = active
+            
+            # Update selected_files list
+            if f["active"]:
+                if name not in selected:
+                    selected.append(name)
+            else:
+                selected = [s for s in selected if s != name]
+            
+            settings["selected_files"] = selected
+            break
+    
+    return settings
+
+
+def rename_config_file(settings, old_name, new_name):
+    """Rename a config file (local name only).
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    - old_name (str): Current name of the config file.
+    - new_name (str): New name for the config file.
+    
+    Returns:
+    - dict: Updated settings dictionary.
+    """
+    files = settings.get("config_files", [])
+    
+    # Check if new name already exists
+    for f in files:
+        if f.get("name") == new_name:
+            print(f"Name '{new_name}' already exists.")
+            return settings
+    
+    for f in files:
+        if f.get("name") == old_name:
+            f["name"] = new_name
+            break
+    
+    # Update selected_files
+    selected = settings.get("selected_files", [])
+    settings["selected_files"] = [new_name if s == old_name else s for s in selected]
+    
+    # Update sync_selection
+    sync_sel = settings.get("sync_selection", [])
+    settings["sync_selection"] = [new_name if s == old_name else s for s in sync_sel]
+    
     return settings
 
 
@@ -124,7 +239,46 @@ def set_selected_files(settings, selected_names):
     - dict: Updated settings dictionary.
     """
     settings["selected_files"] = selected_names
+    
+    # Also update active status
+    files = settings.get("config_files", [])
+    for f in files:
+        f["active"] = f.get("name") in selected_names
+    
     return settings
+
+
+def get_active_config_files(settings):
+    """Get list of active (enabled) config files.
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    
+    Returns:
+    - list: List of active config file configurations.
+    """
+    files = settings.get("config_files", [])
+    return [f for f in files if f.get("active", True)]
+
+
+def get_files_for_sync(settings, use_sync_selection=False):
+    """Get list of files to sync.
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    - use_sync_selection (bool): If True, use sync_selection instead of active files.
+    
+    Returns:
+    - list: List of config file configurations to sync.
+    """
+    if use_sync_selection:
+        sync_sel = settings.get("sync_selection", [])
+        if sync_sel:
+            files = settings.get("config_files", [])
+            return [f for f in files if f.get("name") in sync_sel]
+    
+    # Fall back to active files
+    return get_active_config_files(settings)
 
 
 def merge_configs(configs):
@@ -269,7 +423,7 @@ def save_to_selected_files(config, settings, config_dir):
 
 
 def config_files_print(settings):
-    """Print the list of configured config files.
+    """Print the list of configured config files with active status.
     
     Parameters:
     - settings (dict): Settings dictionary.
@@ -278,9 +432,10 @@ def config_files_print(settings):
     
     files = settings.get("config_files", [])
     selected = settings.get("selected_files", [])
+    sync_sel = settings.get("sync_selection", [])
     
     table = prettytable.PrettyTable()
-    table.field_names = ["#", "Name", "Path", "Selected"]
+    table.field_names = ["#", "Name", "Path", "Active", "Sync"]
     
     if not files:
         print("No additional config files configured.")
@@ -290,11 +445,14 @@ def config_files_print(settings):
     for i, f in enumerate(files, 1):
         name = f.get("name", "N/A")
         path = f.get("path", "N/A")
-        is_selected = "✓" if name in selected else ""
-        table.add_row([i, name, path, is_selected])
+        is_active = "✓" if f.get("active", True) or name in selected else ""
+        is_sync = "✓" if name in sync_sel else ""
+        table.add_row([i, name, path, is_active, is_sync])
     
     print("Configured Config Files:")
     print(table)
+    print("\nActive = File is used in current session")
+    print("Sync = File is included in non-interactive sync")
 
 
 def get_file_completions(settings):
@@ -391,11 +549,13 @@ Config File Management Menu:
 
     1. Add Config File
     2. Remove Config File
-    3. Select Files to Use
-    4. Select All Files
-    5. View Selected Files
+    3. Toggle File Active On/Off
+    4. Rename Config File (local name)
+    5. Set Sync Selection (for non-interactive mode)
+    6. Select All Files Active
+    7. View Selected Files
 
-    6. Back to Main Menu
+    8. Back to Main Menu
     """
     
     while True:
@@ -410,16 +570,22 @@ Config File Management Menu:
         elif option == "2":
             settings = remove_file_cli(settings, config_dir)
         elif option == "3":
-            settings = select_files_cli(settings, config_dir)
+            settings = toggle_file_cli(settings, config_dir)
         elif option == "4":
+            settings = rename_file_cli(settings, config_dir)
+        elif option == "5":
+            settings = set_sync_selection_cli(settings, config_dir)
+        elif option == "6":
             files = settings.get("config_files", [])
             settings["selected_files"] = [f.get("name") for f in files]
+            for f in files:
+                f["active"] = True
             save_settings(settings, config_dir)
-            print("All files selected.")
+            print("All files set to active.")
             input("Press Enter to continue...")
-        elif option == "5":
+        elif option == "7":
             view_selected_cli(settings)
-        elif option == "6" or option.lower() in ["back", "done", "q"]:
+        elif option == "8" or option.lower() in ["back", "done", "q"]:
             return
         else:
             print("Invalid option selected.")
@@ -571,13 +737,15 @@ def view_selected_cli(settings):
     - settings (dict): Settings dictionary.
     """
     os.system("cls" if os.name == "nt" else "clear")
-    print("=== Currently Selected Files ===\n")
+    print("=== Currently Active Files ===\n")
     
     selected = settings.get("selected_files", [])
     files = settings.get("config_files", [])
+    sync_sel = settings.get("sync_selection", [])
     
+    print("Active files (used in current session):")
     if not selected:
-        print("No files selected. Using default ssh-config.yaml")
+        print("  No files selected. Using default ssh-config.yaml")
     else:
         for name in selected:
             for f in files:
@@ -585,4 +753,155 @@ def view_selected_cli(settings):
                     print(f"  ✓ {name}: {f.get('path', 'N/A')}")
                     break
     
+    print("\nSync selection (used in non-interactive mode):")
+    if not sync_sel:
+        print("  Not set - will use active files")
+    else:
+        for name in sync_sel:
+            for f in files:
+                if f.get("name") == name:
+                    print(f"  ✓ {name}: {f.get('path', 'N/A')}")
+                    break
+    
     input("\nPress Enter to continue...")
+
+
+def toggle_file_cli(settings, config_dir):
+    """CLI for toggling a file's active status on/off.
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    - config_dir (str): Path to the configuration directory.
+    
+    Returns:
+    - dict: Updated settings dictionary.
+    """
+    os.system("cls" if os.name == "nt" else "clear")
+    config_files_print(settings)
+    
+    files = settings.get("config_files", [])
+    if not files:
+        print("No config files to toggle.")
+        input("Press Enter to continue...")
+        return settings
+    
+    try:
+        choice = int(input("\nEnter file number to toggle (or 0 to cancel): ").strip())
+        if choice == 0:
+            return settings
+        if 1 <= choice <= len(files):
+            file_entry = files[choice - 1]
+            name = file_entry.get("name", "")
+            settings = toggle_file_active(settings, name)
+            save_settings(settings, config_dir)
+            new_status = "ACTIVE" if file_entry.get("active", True) else "INACTIVE"
+            print(f"\nFile '{name}' is now {new_status}.")
+        else:
+            print("Invalid selection.")
+    except ValueError:
+        print("Invalid input.")
+    
+    input("Press Enter to continue...")
+    return settings
+
+
+def rename_file_cli(settings, config_dir):
+    """CLI for renaming a config file (local name only).
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    - config_dir (str): Path to the configuration directory.
+    
+    Returns:
+    - dict: Updated settings dictionary.
+    """
+    os.system("cls" if os.name == "nt" else "clear")
+    config_files_print(settings)
+    
+    files = settings.get("config_files", [])
+    if not files:
+        print("No config files to rename.")
+        input("Press Enter to continue...")
+        return settings
+    
+    try:
+        choice = int(input("\nEnter file number to rename (or 0 to cancel): ").strip())
+        if choice == 0:
+            return settings
+        if 1 <= choice <= len(files):
+            old_name = files[choice - 1].get("name", "")
+            new_name = input(f"Enter new name for '{old_name}': ").strip()
+            if not new_name:
+                print("Name cannot be empty.")
+            else:
+                settings = rename_config_file(settings, old_name, new_name)
+                save_settings(settings, config_dir)
+                print(f"\nFile renamed from '{old_name}' to '{new_name}'.")
+                print("Note: This is a local name only. When uploaded, standard naming is used.")
+        else:
+            print("Invalid selection.")
+    except ValueError:
+        print("Invalid input.")
+    
+    input("Press Enter to continue...")
+    return settings
+
+
+def set_sync_selection_cli(settings, config_dir):
+    """CLI for setting the sync selection for non-interactive mode.
+    
+    Parameters:
+    - settings (dict): Settings dictionary.
+    - config_dir (str): Path to the configuration directory.
+    
+    Returns:
+    - dict: Updated settings dictionary.
+    """
+    os.system("cls" if os.name == "nt" else "clear")
+    config_files_print(settings)
+    
+    files = settings.get("config_files", [])
+    current_sync = settings.get("sync_selection", [])
+    
+    if not files:
+        print("No config files configured.")
+        input("Press Enter to continue...")
+        return settings
+    
+    print("\n=== Set Sync Selection for Non-Interactive Mode ===")
+    print("\nThis determines which files are synced when running:")
+    print("  goodass --fix-keys")
+    print("\nCurrent sync selection:", current_sync if current_sync else "(uses active files)")
+    
+    print("\nOptions:")
+    print("  Type 'all' to sync all files")
+    print("  Type file numbers separated by commas (e.g., 1,2,3)")
+    print("  Type 'active' to use currently active files")
+    print("  Type 'clear' to clear sync selection (will use active files)")
+    
+    user_input = input("\nYour selection: ").strip().lower()
+    
+    if user_input == "all":
+        settings["sync_selection"] = [f.get("name") for f in files]
+        print("Sync selection set to all files.")
+    elif user_input == "active":
+        settings["sync_selection"] = list(settings.get("selected_files", []))
+        print("Sync selection set to match current active files.")
+    elif user_input == "clear" or user_input == "none":
+        settings["sync_selection"] = []
+        print("Sync selection cleared. Will use active files.")
+    else:
+        try:
+            indices = [int(x.strip()) for x in user_input.split(",")]
+            sync_names = []
+            for idx in indices:
+                if 1 <= idx <= len(files):
+                    sync_names.append(files[idx - 1].get("name"))
+            settings["sync_selection"] = sync_names
+            print(f"Sync selection set to {len(sync_names)} file(s).")
+        except ValueError:
+            print("Invalid input.")
+    
+    save_settings(settings, config_dir)
+    input("Press Enter to continue...")
+    return settings

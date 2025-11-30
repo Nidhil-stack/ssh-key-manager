@@ -359,10 +359,12 @@ Work with multiple `ssh-config.yaml` files simultaneously, useful for managing d
 ```
     1. Add Config File
     2. Remove Config File
-    3. Select Files to Use
-    4. Select All Files
-    5. View Selected Files
-    6. Back to Main Menu
+    3. Toggle File Active On/Off
+    4. Rename Config File (local name)
+    5. Set Sync Selection (for non-interactive mode)
+    6. Select All Files Active
+    7. View Selected Files
+    8. Back to Main Menu
 ```
 
 ### Adding Config Files
@@ -383,46 +385,70 @@ Created /home/user/configs/prod-ssh-config.yaml
 Config file 'Production' added successfully.
 ```
 
-### Selecting Files to Use
+### Toggling Files On/Off
 
-1. Select option `3` (Select Files to Use)
-2. Enter your selection:
-   - Type `all` to select all files
+Toggle individual files active or inactive:
+
+1. Select option `3` (Toggle File Active On/Off)
+2. Enter the file number to toggle
+3. The file's status will switch between ACTIVE and INACTIVE
+
+**Active files** are used in the current session and merged together.
+**Inactive files** are preserved but not used until activated.
+
+### Renaming Config Files
+
+Give custom local names to your config files:
+
+1. Select option `4` (Rename Config File)
+2. Enter the file number to rename
+3. Enter the new name
+
+> **Note:** This is a local name only. When uploaded to remote servers, the standard filename is used.
+
+### Setting Sync Selection for Non-Interactive Mode
+
+Configure which files are synced when running `goodass --fix-keys`:
+
+1. Select option `5` (Set Sync Selection)
+2. Choose your sync selection:
+   - Type `all` to sync all files
    - Type comma-separated numbers (e.g., `1,2,3`)
-   - Type `none` to clear selection
+   - Type `active` to use currently active files
+   - Type `clear` to reset (will use active files)
 
 **Example:**
 ```
 Configured Config Files:
-+---+------------+--------------------------------------+----------+
-| # |    Name    |                 Path                 | Selected |
-+---+------------+--------------------------------------+----------+
-| 1 | Production | /home/user/configs/prod-ssh.yaml     |          |
-| 2 | Staging    | /home/user/configs/staging-ssh.yaml  |          |
-| 3 | Dev        | /home/user/configs/dev-ssh.yaml      | ✓        |
-+---+------------+--------------------------------------+----------+
++---+------------+--------------------------------------+--------+------+
+| # |    Name    |                 Path                 | Active | Sync |
++---+------------+--------------------------------------+--------+------+
+| 1 | Production | /home/user/configs/prod-ssh.yaml     |   ✓    |  ✓   |
+| 2 | Staging    | /home/user/configs/staging-ssh.yaml  |   ✓    |      |
+| 3 | Dev        | /home/user/configs/dev-ssh.yaml      |        |  ✓   |
++---+------------+--------------------------------------+--------+------+
 
-Select files to use:
-  Type 'all' to select all files
-  Type file numbers separated by commas (e.g., 1,2,3)
-  Type 'none' to clear selection
-
-Your selection: 1,3
-Selected 2 file(s).
+Active = File is used in current session
+Sync = File is included in non-interactive sync
 ```
 
 ### Working with Multiple Files
 
-When multiple files are selected:
-- **Hosts and users are merged** from all selected files
-- **Changes are saved** to the first selected file
+When multiple files are active:
+- **Hosts and users are merged** from all active files
+- **Changes are saved** to the first active file
 - The selection is **remembered** across sessions
-- **All selected files are synced** when autosync is enabled
+- **All active files are synced** when autosync is enabled
 
 **Startup behavior:**
 - If you have multiple config files and no prior selection, you'll be prompted to choose
 - Your last selection is automatically used on subsequent runs
-- When autosync is enabled, ALL selected config files are uploaded to ALL sync servers
+- When autosync is enabled, ALL active config files are uploaded to ALL sync servers
+
+**Non-interactive mode (`--fix-keys`):**
+- Uses **sync_selection** if configured
+- Falls back to **active files** if no sync selection is set
+- Sync selection is saved separately from active files
 
 ---
 
