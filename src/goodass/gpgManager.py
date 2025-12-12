@@ -315,6 +315,8 @@ def sign_and_encrypt_config(
 
     gpg = get_gpg(gpg_home)
 
+    gpg.trust_keys(encrypt_fingerprints, "TRUST_ULTIMATE")
+
     with open(config_path, "r") as f:
         data = f.read()
 

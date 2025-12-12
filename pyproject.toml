@@ -15,7 +15,7 @@ dependencies = [
     "PyYAML==6.0.3",
     "paramiko==4.0.0",
     "platformdirs==4.5.0",
-    "python-gnupg==0.5.4",
+    "python-gnupg==0.5.5",
 ]
 license = "Apache-2.0"
 license-files = ["LICEN[CS]E*"]

@@ -181,8 +181,8 @@ def main():
         print(pwds)
 
     signal.signal(signal.SIGINT, utils.signal_handler)
-
-    input("verbosity: " + str(verbosity) + " (press Enter to continue)")
+    if verbosity >= 3:
+        input("verbosity: " + str(verbosity) + " (press Enter to continue)")
     if verbosity != 4:
         err_log_path = os.path.join(config_dir, "goodass_error_log.txt")
         stderr_file = open(err_log_path, "w")

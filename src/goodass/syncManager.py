@@ -121,7 +121,7 @@ def remove_remote_server(config, host, username):
     return config
 
 
-def silent_sign_before_upload(config_path, config, gpg_home=None):
+def silent_encrypt_and_sign_before_upload(config_path, config, gpg_home=None):
     """Silently sign config file before upload if GPG keys are configured.
 
     This is called automatically before uploading to create/update the signature.
@@ -141,27 +141,24 @@ def silent_sign_before_upload(config_path, config, gpg_home=None):
     try:
         # Get secret keys to sign with
         secret_keys = gpgManager.list_secret_keys(gpg_home)
+        fingerprints = [k.get("fingerprint") for k in gpg_keys if k.get("fingerprint")]
+        if not fingerprints:
+            return True  # No trusted keys, skip silently
         if not secret_keys:
             return True  # No secret key available, skip silently
 
-        # Sign with the first available secret key (silent, no passphrase prompt)
-        gpg = gpgManager.get_gpg(gpg_home)
-        with open(config_path, "rb") as f:
-            data = f.read()
-
-        signed = gpg.sign(data, detach=True, armor=True)
-
-        if signed.data:
-            sig_path = config_path + ".sig"
-            with open(sig_path, "wb") as f:
-                f.write(signed.data)
+        sign_fingerprint = secret_keys[0].get("fingerprint")
+        signed = gpgManager.sign_and_encrypt_config(
+            config_path, fingerprints, sign_fingerprint, None, gpg_home
+        )
+        if signed:
             return True
         return True  # Don't fail silently even if signing fails
     except Exception:
         return True  # Don't fail upload if signing fails
 
 
-def silent_verify_after_download(config_path, config, gpg_home=None):
+def silent_decrypt_and_verify_after_download(config_path, config, gpg_home=None):
     """Silently verify config signature after download if GPG keys are configured.
 
     This is called automatically after downloading to verify integrity.
@@ -179,16 +176,13 @@ def silent_verify_after_download(config_path, config, gpg_home=None):
     if not gpg_keys:
         return True, None  # No GPG configured, skip silently
 
-    sig_path = config_path + ".sig"
-    if not os.path.exists(sig_path):
-        return True, "No signature file found (unsigned file)"
-
+    encrypted_path = config_path + ".gpg"
     try:
         trusted_fingerprints = [
             k.get("fingerprint") for k in gpg_keys if k.get("fingerprint")
         ]
-        is_valid, signer = gpgManager.verify_config_signature(
-            config_path, trusted_fingerprints, gpg_home
+        is_valid, signer = gpgManager.decrypt_and_verify_config(
+            encrypted_path, trusted_fingerprints, config_path, None, gpg_home
         )
 
         if is_valid:
@@ -224,7 +218,7 @@ def upload_config_to_server(config_path, server, ssh_private_key_path, gpg_home=
 
     # Silently sign before upload if GPG is configured
     config = load_ssh_config(config_path)
-    silent_sign_before_upload(config_path, config, gpg_home)
+    silent_encrypt_and_sign_before_upload(config_path, config, gpg_home)
 
     try:
         client = paramiko.SSHClient()
@@ -260,18 +254,19 @@ def upload_config_to_server(config_path, server, ssh_private_key_path, gpg_home=
                         except IOError:
                             pass  # Directory might already exist
             except Exception:
+                print(Exception)
                 pass
 
-        sftp.put(config_path, remote_path)
-
-        # Also upload signature file if it exists
-        sig_path = config_path + ".sig"
-        if os.path.exists(sig_path):
-            remote_sig_path = remote_path + ".sig"
+        # Only upload signature file if it exists
+        enc_path = config_path + ".gpg"
+        if os.path.exists(enc_path):
+            remote_sig_path = remote_path + ".gpg"
             try:
-                sftp.put(sig_path, remote_sig_path)
+                sftp.put(enc_path, remote_sig_path)
             except Exception:
                 pass  # Don't fail if signature upload fails
+        else:
+            sftp.put(config_path, remote_path)
 
         sftp.close()
         client.close()
@@ -319,27 +314,22 @@ def download_config_from_server(
         )
 
         sftp = client.open_sftp()
-        sftp.get(remote_path, config_path)
 
-        # Also download signature file if it exists
-        sig_path = config_path + ".sig"
-        remote_sig_path = remote_path + ".sig"
+        encrypted_path = config_path + ".gpg"
+        config = load_ssh_config(config_path)
         try:
-            sftp.get(remote_sig_path, sig_path)
+            sftp.get(remote_path + ".gpg", encrypted_path)
         except Exception:
-            pass  # Signature might not exist
+            pass  # Encrypted file might not exist
+
+        if os.path.exists(encrypted_path):
+            silent_decrypt_and_verify_after_download(encrypted_path, config, gpg_home)
+        else:
+            sftp.get(remote_path, config_path)
+        # Also download signature file if it exists
 
         sftp.close()
         client.close()
-
-        # Silently verify after download if GPG is configured
-        config = load_ssh_config(config_path)
-        is_valid, warning = silent_verify_after_download(config_path, config, gpg_home)
-
-        if warning:
-            print(f"  ⚠ {username}@{host}: {warning}")
-        else:
-            print(f"  ✓ {username}@{host}")
 
         return True
     except Exception as e:
